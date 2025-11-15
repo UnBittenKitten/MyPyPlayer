@@ -25,14 +25,16 @@ A simple media player built with CustomTkinter and Python.
      venv\Scripts\activate
      ```
    - On macOS and Linux:
-     `bash
-source venv/bin/activate
-`
+     ```bash
+     source venv/bin/activate
+     ```
+
+     
      3.1 Update pip to the latest version:
 
    ```bash
     pip install --upgrade pip
-   ```
+````
 
 4. Install the required packages:
    ```bash
