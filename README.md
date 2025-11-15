@@ -34,7 +34,7 @@ A simple media player built with CustomTkinter and Python.
 
    ```bash
     pip install --upgrade pip
-````
+   ```
 
 4. Install the required packages:
    ```bash
