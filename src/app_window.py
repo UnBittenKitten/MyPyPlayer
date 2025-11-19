@@ -1,6 +1,18 @@
+import warnings
+# Filter out the specific warning about pkg_resources
+warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
 import customtkinter as ctk
 import tkinter as tk
 import utils.resource_path as rp
+import classes.audio_backend as ab
+import classes.data_manager as dm
+
+# Import the panes
+import panes.sources_pane as sources_pane
+import panes.explorer_pane as explorer_pane
+import panes.playlists_pane as playlists_pane
+import panes.media_controls_pane as media_controls_pane
+import panes.song_queue_pane as song_queue_pane
 
 my_app_id = "MyPyPlayer.v0.0.1" 
 
@@ -23,7 +35,22 @@ class AppWindow(ctk.CTk):
         WIDTH = 800
         HEIGHT = 600
         self.geometry(f"{WIDTH}x{HEIGHT}") 
-
+        
+        self.audio_backend = ab.AudioBackend()  # Initialize audio backend
+        self.audio_backend.set_volume(0.5)  # Set default volume to 50%
+        self.audio_backend.load_music(rp.resource_path("assets/samplemusic/sample1.mp3"))
+        self.audio_backend.play_music()
+        
+        self.data_manager = dm.DataManager()  # Initialize data manager
+        
+        # self.data_manager.add_source(r"C:\Users\unbit\Documents\Soulseek Downloads\complete\spartantime\(2008) - Lo esencial de José José")
+        
+        print("Current Sources in DB:", self.data_manager.get_sources())
+        
+        self.data_manager.create_playlist("My Favorites")
+        self.data_manager.add_song_to_playlist("My Favorites", rp.resource_path("assets/samplemusic/sample1.mp3"))
+        print("Songs in 'My Favorites':", self.data_manager.get_songs_in_playlist("My Favorites"))
+        
         # --- Set the icon for the title bar ---
         # Use the resource_path function to get the correct path
         icon_path = rp.resource_path("assets/icon/icon.ico")
@@ -57,6 +84,12 @@ class AppWindow(ctk.CTk):
         self.sec2 = ctk.CTkFrame(self.left_pane, fg_color="#3A3A3A", corner_radius=0)
         self.create_label(self.sec2, "2. Left Bottom")
         self.left_pane.add(self.sec2, stretch="always")
+        self.sources_component = sources_pane.add_to(
+            self.sec2,
+            self.data_manager,
+            on_folder_click=lambda path: print(f"Folder clicked: {path}")
+        )
+        
 
 
         # --- RIGHT SIDE (Vertical Split) ---
