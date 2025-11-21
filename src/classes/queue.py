@@ -12,7 +12,7 @@ class Queue:
 
         # If queue is empty
         if self.root is None:
-            self.root = newNode
+            self.root = newNode # bruno
             return
 
         # Otherwise traverse to the last node
