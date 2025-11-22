@@ -30,32 +30,48 @@ class AppWindow(ctk.CTk):
         # Call the parent class constructor
         super().__init__(*args, **kwargs)
 
+        # --- Data Manager (Init First) ---
+        # We initialize this FIRST so we can load geometry before showing the window
+        self.data_manager = dm.DataManager() 
+
         # --- Configure Window ---
         self.title("Custom Tkinter App")
-        WIDTH = 800
-        HEIGHT = 600
-        self.geometry(f"{WIDTH}x{HEIGHT}") 
         
-        self.audio_backend = ab.AudioBackend()  # Initialize audio backend
-        self.audio_backend.set_volume(0.5)  # Set default volume to 50%
-        # Using try/except for resources in case file is missing during dev
+        # --- Restore Geometry & State ---
+        # 1. Load saved settings
+        saved_geometry = self.data_manager.get_setting("window_geometry")
+        saved_state = self.data_manager.get_setting("window_state")
+
+        # 2. Apply Geometry (Size + Position)
+        if saved_geometry:
+            try:
+                self.geometry(saved_geometry)
+            except Exception:
+                self.geometry("800x600")
+        else:
+            self.geometry("800x600")
+
+        # 3. Apply State (Maximized/Zoomed)
+        # We use .after(10) because sometimes setting state immediately on init fails
+        if saved_state == "zoomed":
+            self.after(10, lambda: self.state("zoomed"))
+
+        # --- Audio Backend ---
+        self.audio_backend = ab.AudioBackend() 
+        self.audio_backend.set_volume(0.5)
         try:
             self.audio_backend.load_music(rp.resource_path("assets/samplemusic/sample1.mp3"))
             self.audio_backend.play_music()
         except Exception as e:
             print(f"Audio init warning: {e}")
         
-        self.data_manager = dm.DataManager()  # Initialize data manager
-        
-        # self.data_manager.add_source(r"C:\Users\unbit\Documents\Soulseek Downloads\complete\spartantime\(2008) - Lo esencial de José José")
-        
+        # --- Debug / Initial Data Setup ---
         print("Current Sources in DB:", self.data_manager.get_sources())
-        
         self.data_manager.create_playlist("My Favorites")
         self.data_manager.add_song_to_playlist("My Favorites", rp.resource_path("assets/samplemusic/sample1.mp3"))
         print("Songs in 'My Favorites':", self.data_manager.get_songs_in_playlist("My Favorites"))
         
-        # --- Set the icon for the title bar ---
+        # --- Set the icon ---
         try:
             icon_path = rp.resource_path("assets/icon/icon.ico")
             self.iconbitmap(icon_path)
@@ -88,7 +104,6 @@ class AppWindow(ctk.CTk):
         self.create_label(self.sec2, "2. Left Bottom")
         self.left_pane.add(self.sec2, stretch="always")
         
-        # Attach custom pane logic
         try:
             self.sources_component = sources_pane.add_to(
                 self.sec2,
@@ -123,10 +138,7 @@ class AppWindow(ctk.CTk):
         self.right_pane.add(self.sec5, stretch="always")
         
         # --- Layout Restoration Logic ---
-        # We delay loading slightly to ensure Tkinter has drawn the window
         self.after(200, self.load_layout)
-        
-        # Hook into the close event to save settings
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def create_label(self, parent, text):
@@ -137,14 +149,11 @@ class AppWindow(ctk.CTk):
     def load_layout(self):
         """Fetches coords from DB and applies them to sashes."""
         try:
-            # Helper to safely apply sash position
             def apply_sash(pane, db_key):
                 coords = self.data_manager.get_setting(db_key)
                 if coords and len(coords) == 2:
-                    # For standard tk.PanedWindow, sash_place takes (index, x, y)
                     pane.sash_place(0, int(coords[0]), int(coords[1]))
 
-            # Apply stored positions
             apply_sash(self.main_pane, "sash_main")
             apply_sash(self.left_pane, "sash_left")
             apply_sash(self.right_pane, "sash_right")
@@ -154,21 +163,24 @@ class AppWindow(ctk.CTk):
             print(f"Error loading layout: {e}")
 
     def on_close(self):
-        """Saves current sash coords to DB and closes."""
+        """Saves current geometry and sashes to DB and closes."""
         try:
-            # Helper to get coords. Returns (x, y) tuple.
-            # sash_coord(0) gets the position of the first divider
+            # 1. Save Sash Positions
             self.data_manager.save_setting("sash_main", self.main_pane.sash_coord(0))
             self.data_manager.save_setting("sash_left", self.left_pane.sash_coord(0))
             self.data_manager.save_setting("sash_right", self.right_pane.sash_coord(0))
             self.data_manager.save_setting("sash_right_top", self.right_top_pane.sash_coord(0))
             
-            # Also save window geometry
-            self.data_manager.save_setting("window_geometry", self.geometry())
+            # 2. Save Window Geometry & State
+            current_state = self.state()
+            self.data_manager.save_setting("window_state", current_state)
+
+            # Only save specific dimensions if we are NOT maximized. 
+            # If we save while maximized, the "restore" size is lost.
+            if current_state != "zoomed":
+                self.data_manager.save_setting("window_geometry", self.geometry())
             
         except Exception as e:
-            # If sashes haven't been drawn yet, sash_coord might fail
-            print(f"Error saving layout (window might be closed too fast): {e}")
+            print(f"Error saving layout: {e}")
 
-        # Destroy the app
         self.destroy()
