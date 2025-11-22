@@ -31,18 +31,15 @@ class AppWindow(ctk.CTk):
         super().__init__(*args, **kwargs)
 
         # --- Data Manager (Init First) ---
-        # We initialize this FIRST so we can load geometry before showing the window
         self.data_manager = dm.DataManager() 
 
         # --- Configure Window ---
         self.title("Custom Tkinter App")
         
         # --- Restore Geometry & State ---
-        # 1. Load saved settings
         saved_geometry = self.data_manager.get_setting("window_geometry")
         saved_state = self.data_manager.get_setting("window_state")
 
-        # 2. Apply Geometry (Size + Position)
         if saved_geometry:
             try:
                 self.geometry(saved_geometry)
@@ -51,8 +48,6 @@ class AppWindow(ctk.CTk):
         else:
             self.geometry("800x600")
 
-        # 3. Apply State (Maximized/Zoomed)
-        # We use .after(10) because sometimes setting state immediately on init fails
         if saved_state == "zoomed":
             self.after(10, lambda: self.state("zoomed"))
 
@@ -65,11 +60,11 @@ class AppWindow(ctk.CTk):
         except Exception as e:
             print(f"Audio init warning: {e}")
         
-        # --- Debug / Initial Data Setup ---
+        # --- Debug Setup ---
+        # (Calls are kept as requested)
         print("Current Sources in DB:", self.data_manager.get_sources())
         self.data_manager.create_playlist("My Favorites")
         self.data_manager.add_song_to_playlist("My Favorites", rp.resource_path("assets/samplemusic/sample1.mp3"))
-        print("Songs in 'My Favorites':", self.data_manager.get_songs_in_playlist("My Favorites"))
         
         # --- Set the icon ---
         try:
@@ -147,36 +142,72 @@ class AppWindow(ctk.CTk):
         label.place(relx=0.5, rely=0.5, anchor="center")
 
     def load_layout(self):
-        """Fetches coords from DB and applies them to sashes."""
+        """Fetches ratios from DB and applies them."""
         try:
-            def apply_sash(pane, db_key):
-                coords = self.data_manager.get_setting(db_key)
-                if coords and len(coords) == 2:
-                    pane.sash_place(0, int(coords[0]), int(coords[1]))
+            # Force an update so we have real dimensions to work with
+            self.update_idletasks()
 
-            apply_sash(self.main_pane, "sash_main")
-            apply_sash(self.left_pane, "sash_left")
-            apply_sash(self.right_pane, "sash_right")
-            apply_sash(self.right_top_pane, "sash_right_top")
+            def apply_ratio(pane, db_key, is_vertical=False):
+                ratio = self.data_manager.get_setting(db_key)
+                if ratio is not None:
+                    try:
+                        ratio = float(ratio)
+                        if is_vertical:
+                            total_size = pane.winfo_height()
+                            new_pos = int(total_size * ratio)
+                            # Avoid setting sash to 0 or negative
+                            if new_pos > 0:
+                                pane.sash_place(0, 0, new_pos)
+                        else:
+                            total_size = pane.winfo_width()
+                            new_pos = int(total_size * ratio)
+                            if new_pos > 0:
+                                pane.sash_place(0, new_pos, 0)
+                    except Exception as e:
+                        print(f"Error applying ratio for {db_key}: {e}")
+
+            # Apply ratios
+            apply_ratio(self.main_pane, "ratio_main", is_vertical=False)
+            apply_ratio(self.left_pane, "ratio_left", is_vertical=True)
+            apply_ratio(self.right_pane, "ratio_right", is_vertical=True)
+            apply_ratio(self.right_top_pane, "ratio_right_top", is_vertical=False)
 
         except Exception as e:
             print(f"Error loading layout: {e}")
 
     def on_close(self):
-        """Saves current geometry and sashes to DB and closes."""
+        """Saves ratios (0.0 - 1.0) to DB and closes."""
         try:
-            # 1. Save Sash Positions
-            self.data_manager.save_setting("sash_main", self.main_pane.sash_coord(0))
-            self.data_manager.save_setting("sash_left", self.left_pane.sash_coord(0))
-            self.data_manager.save_setting("sash_right", self.right_pane.sash_coord(0))
-            self.data_manager.save_setting("sash_right_top", self.right_top_pane.sash_coord(0))
+            # Helper to calculate ratio
+            def get_ratio(pane, is_vertical=False):
+                try:
+                    # sash_coord returns (x, y)
+                    coords = pane.sash_coord(0)
+                    if is_vertical:
+                        # For vertical, we care about Y position relative to Height
+                        total = pane.winfo_height()
+                        pos = coords[1]
+                    else:
+                        # For horizontal, we care about X position relative to Width
+                        total = pane.winfo_width()
+                        pos = coords[0]
+                    
+                    if total > 0:
+                        return pos / total
+                    return 0.5
+                except Exception:
+                    return 0.5
+
+            # 1. Save Ratios
+            self.data_manager.save_setting("ratio_main", get_ratio(self.main_pane, False))
+            self.data_manager.save_setting("ratio_left", get_ratio(self.left_pane, True))
+            self.data_manager.save_setting("ratio_right", get_ratio(self.right_pane, True))
+            self.data_manager.save_setting("ratio_right_top", get_ratio(self.right_top_pane, False))
             
             # 2. Save Window Geometry & State
             current_state = self.state()
             self.data_manager.save_setting("window_state", current_state)
 
-            # Only save specific dimensions if we are NOT maximized. 
-            # If we save while maximized, the "restore" size is lost.
             if current_state != "zoomed":
                 self.data_manager.save_setting("window_geometry", self.geometry())
             
