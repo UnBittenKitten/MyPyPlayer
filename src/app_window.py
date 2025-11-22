@@ -60,12 +60,6 @@ class AppWindow(ctk.CTk):
         except Exception as e:
             print(f"Audio init warning: {e}")
         
-        # --- Debug Setup ---
-        # (Calls are kept as requested)
-        print("Current Sources in DB:", self.data_manager.get_sources())
-        self.data_manager.create_playlist("My Favorites")
-        self.data_manager.add_song_to_playlist("My Favorites", rp.resource_path("assets/samplemusic/sample1.mp3"))
-        
         # --- Set the icon ---
         try:
             icon_path = rp.resource_path("assets/icon/icon.ico")
@@ -91,12 +85,21 @@ class AppWindow(ctk.CTk):
 
         # Section 1: Left Top
         self.sec1 = ctk.CTkFrame(self.left_pane, fg_color="#2B2B2B", corner_radius=0)
-        self.create_label(self.sec1, "1. Left Top")
+        # self.create_label(self.sec1, "1. Left Top")
         self.left_pane.add(self.sec1, stretch="always")
+
+        try:
+            self.playlists_component = playlists_pane.add_to(
+                self.sec1,
+                self.data_manager,
+                on_playlist_click=lambda path: print(f"Playlist clicked: {path}")
+            )
+        except Exception as e:
+            print(f"Playlists pane load error: {e}")
 
         # Section 2: Left Bottom
         self.sec2 = ctk.CTkFrame(self.left_pane, fg_color="#3A3A3A", corner_radius=0)
-        self.create_label(self.sec2, "2. Left Bottom")
+        # self.create_label(self.sec2, "2. Left Bottom")
         self.left_pane.add(self.sec2, stretch="always")
         
         try:

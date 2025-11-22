@@ -108,17 +108,28 @@ class DataManager:
             print(f"DB Error (create_playlist): {e}")
             return False
 
+    def rename_playlist(self, old_name, new_name):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("UPDATE playlists SET name = ? WHERE name = ?", (new_name, old_name))
+                return True
+        except sqlite3.IntegrityError:
+            return False
+        except Exception as e:
+            print(f"DB Error (rename_playlist): {e}")
+            return False
+
     def get_playlists(self):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT name FROM playlists")
-                return [row[0] for row in cursor.fetchall()]
+                cursor.execute("SELECT id, name FROM playlists")
+                return cursor.fetchall()
         except Exception as e:
             print(f"DB Error (get_playlists): {e}")
             return []
 
-    def delete_playlist(self, name):
+    def remove_playlist(self, name):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("DELETE FROM playlists WHERE name = ?", (name,))
