@@ -1,5 +1,5 @@
 import pygame
-from mutagen import File
+from mutagen._file import File
 from PIL import Image
 import io
 import customtkinter as ctk

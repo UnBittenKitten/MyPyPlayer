@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 
 class DataManager:
     def __init__(self, app_name="MyPyPlayer"):
@@ -22,6 +23,14 @@ class DataManager:
         """Initialize the database tables."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
+
+            # 0. Table for UI settings
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ui_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+                )
+            ''')
             
             # 1. Sources (Folders)
             cursor.execute('''
@@ -99,17 +108,28 @@ class DataManager:
             print(f"DB Error (create_playlist): {e}")
             return False
 
+    def rename_playlist(self, old_name, new_name):
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("UPDATE playlists SET name = ? WHERE name = ?", (new_name, old_name))
+                return True
+        except sqlite3.IntegrityError:
+            return False
+        except Exception as e:
+            print(f"DB Error (rename_playlist): {e}")
+            return False
+
     def get_playlists(self):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT name FROM playlists")
-                return [row[0] for row in cursor.fetchall()]
+                cursor.execute("SELECT id, name FROM playlists")
+                return cursor.fetchall()
         except Exception as e:
             print(f"DB Error (get_playlists): {e}")
             return []
 
-    def delete_playlist(self, name):
+    def remove_playlist(self, name):
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("DELETE FROM playlists WHERE name = ?", (name,))
@@ -188,4 +208,32 @@ class DataManager:
             print(f"DB Error (remove_song_from_playlist): {e}")
             return False
 
-            #kxjksskdkjkj
+            
+    # --- UI Settings Management ---
+    def save_setting(self, key, value):
+        """Saves a setting. Value is automatically JSON stringified."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        try:
+            json_val = json.dumps(value)
+            cursor.execute('INSERT OR REPLACE INTO ui_settings (key, value) VALUES (?, ?)', (key, json_val))
+            conn.commit()
+        except Exception as e:
+            print(f"Error saving setting {key}: {e}")
+        finally:
+            conn.close()
+
+    def get_setting(self, key, default=None):
+        """Retrieves a setting. Returns default if not found."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT value FROM ui_settings WHERE key = ?', (key,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            try:
+                return json.loads(row[0])
+            except json.JSONDecodeError:
+                return row[0]
+        return default
