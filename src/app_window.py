@@ -50,6 +50,7 @@ class AppWindow(ctk.CTk):
         self.audio_backend = ab.AudioBackend() 
         self.audio_backend.set_volume(0.5)
         self.current_song_path = None
+        self.current_metadata = None
         
         # --- Set the icon ---
         try:
@@ -114,7 +115,6 @@ class AppWindow(ctk.CTk):
         self.right_top_pane.add(self.sec3, stretch="always")
         
         try:
-            # Aquí puedes agregar el explorador de archivos
             self.explorer_component = explorer_pane.add_to(
                 self.sec3,
                 self.data_manager,
@@ -123,14 +123,20 @@ class AppWindow(ctk.CTk):
         except Exception as e:
             print(f"Explorer pane load error: {e}")
 
-        # Section 4: Right Top Right - NOW PLAYING
+        # Section 4: Right Top Right - SONG QUEUE
         self.sec4 = ctk.CTkFrame(self.right_top_pane, fg_color="#585858", corner_radius=0)
         self.right_top_pane.add(self.sec4, stretch="always")
-        
-        # Aquí mostrarás la metadata de la canción actual
-        self.setup_now_playing_section()
 
-        # Section 5: Right Bottom - MEDIA CONTROLS & QUEUE
+        try:
+            self.queue_component = song_queue_pane.add_to(
+                self.sec4,
+                self.data_manager,
+                self.audio_backend
+            )
+        except Exception as e:
+            print(f"Song queue pane load error: {e}")
+        
+        # Section 5: Right Bottom - MEDIA CONTROLS & METADATA
         self.sec5 = ctk.CTkFrame(self.right_pane, fg_color="#676767", corner_radius=0)
         self.right_pane.add(self.sec5, stretch="always")
         
@@ -150,35 +156,6 @@ class AppWindow(ctk.CTk):
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
-    def setup_now_playing_section(self):
-        """Configura la sección de 'Reproduciendo Ahora'"""
-        # Frame principal
-        self.now_playing_frame = ctk.CTkFrame(self.sec4, fg_color="transparent")
-        self.now_playing_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Título
-        title_label = ctk.CTkLabel(self.now_playing_frame, text="Now Playing", 
-                                 font=("Arial", 18, "bold"))
-        title_label.pack(pady=(0, 20))
-        
-        # Album Art
-        self.album_art_label = ctk.CTkLabel(self.now_playing_frame, text="No Art", 
-                                          image=None, width=200, height=200)
-        self.album_art_label.pack(pady=10)
-        
-        # Song Info
-        self.song_title_label = ctk.CTkLabel(self.now_playing_frame, text="No song selected", 
-                                           font=("Arial", 16, "bold"))
-        self.song_title_label.pack(pady=5)
-        
-        self.artist_label = ctk.CTkLabel(self.now_playing_frame, text="Unknown Artist", 
-                                       font=("Arial", 14))
-        self.artist_label.pack(pady=2)
-        
-        self.duration_label = ctk.CTkLabel(self.now_playing_frame, text="00:00", 
-                                         font=("Arial", 12))
-        self.duration_label.pack(pady=2)
-
     def on_folder_selected(self, folder_path):
         """Cuando se hace clic en una carpeta en Sources Pane"""
         print(f"Folder selected: {folder_path}")
@@ -191,14 +168,13 @@ class AppWindow(ctk.CTk):
         print(f"Song selected: {song_path}")
         self.current_song_path = song_path
         
-        # Cargar y reproducir la canción
         try:
             self.audio_backend.load_music(song_path)
             self.audio_backend.play_music()
             
-            # Actualizar la UI con metadata
-            metadata = self.audio_backend.get_song_metadata(song_path)
-            self.update_now_playing_ui(metadata)
+            self.current_metadata = self.audio_backend.get_song_metadata(song_path)
+            if hasattr(self, 'media_controls'):
+                self.media_controls.update_song_info(self.current_metadata)
             
         except Exception as e:
             print(f"Error loading song: {e}")
@@ -231,7 +207,6 @@ class AppWindow(ctk.CTk):
         """Callback para cambio de volumen"""
         self.audio_backend.set_volume(volume)
 
-    # ... (el resto de los métodos load_layout, on_close, etc. se mantienen igual)
     def create_label(self, parent, text):
         """Helper to add a centered label"""
         label = ctk.CTkLabel(parent, text=text, font=("Arial", 20, "bold"))

@@ -55,21 +55,37 @@ class ExplorerPane:
         # Nombre del archivo
         file_name = os.path.basename(file_path)
         
-        # Label clickeable
+        # Label clickeable para reproducir
         lbl = ctk.CTkLabel(row, text=file_name, anchor="w", cursor="hand2")
         lbl.pack(side="left", padx=10, pady=5, fill="x", expand=True)
         
-        # Bind click event
+        # Bind click event para reproducir
         lbl.bind("<Button-1>", lambda e, p=file_path: self._on_song_click(p))
+        
+        # Botón para añadir a la cola
+        add_btn = ctk.CTkButton(row, text="+", width=30, height=25,
+                              command=lambda p=file_path: self._add_to_queue(p))
+        add_btn.pack(side="right", padx=5)
         
         # Hover effects
         lbl.bind("<Enter>", lambda e, l=lbl: l.configure(text_color="#1f6aa5"))
         lbl.bind("<Leave>", lambda e, l=lbl: l.configure(text_color=["#DCE4EE", "#DCE4EE"]))
 
     def _on_song_click(self, song_path):
-        """Maneja el clic en una canción"""
+        """Maneja el clic en una canción (reproducir)"""
         if self.on_song_click:
             self.on_song_click(song_path)
+
+    def _add_to_queue(self, song_path):
+        """Añade canción a la cola (necesitas acceso al queue_component)"""
+        # Esto requiere que el parent (app_window) exponga el queue_component
+        parent = self.parent
+        while parent and not hasattr(parent, 'queue_component'):
+            parent = parent.master
+            
+        if parent and hasattr(parent, 'queue_component'):
+            parent.queue_component.add_to_queue(song_path)
+            print(f"Added to queue: {song_path}")
 
 def add_to(parent_frame, data_manager, on_song_click=None):
     return ExplorerPane(parent_frame, data_manager, on_song_click)
