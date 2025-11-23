@@ -147,7 +147,9 @@ class AppWindow(ctk.CTk):
                 on_play=self.on_play_clicked,
                 on_pause=self.on_pause_clicked,
                 on_stop=self.on_stop_clicked,
-                on_volume_change=self.on_volume_changed
+                on_volume_change=self.on_volume_changed,
+                on_previous=self.on_previous_clicked,
+                on_next=self.on_next_clicked
             )
         except Exception as e:
             print(f"Media controls load error: {e}")
@@ -155,6 +157,16 @@ class AppWindow(ctk.CTk):
         # --- Layout Restoration Logic ---
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_previous_clicked(self):
+        """Maneja el botón anterior"""
+        # Aquí se implementará la lógica para ir a la canción anterior - WIP
+        print("Previous song clicked")
+
+    def on_next_clicked(self):
+        """Maneja el botón siguiente"""
+        # Aquí se implementará la lógica para ir a la siguiente canción - WIP
+        print("Next song clicked")
 
     def on_folder_selected(self, folder_path):
         """Cuando se hace clic en una carpeta en Sources Pane"""
@@ -175,6 +187,7 @@ class AppWindow(ctk.CTk):
             self.current_metadata = self.audio_backend.get_song_metadata(song_path)
             if hasattr(self, 'media_controls'):
                 self.media_controls.update_song_info(self.current_metadata)
+                self.media_controls.set_playing_state(True)
             
         except Exception as e:
             print(f"Error loading song: {e}")
