@@ -105,17 +105,17 @@ class Queue:
         self.front = None
         self.rear = None
 
-    def add_next(self, value):
-        if self.is_empty():
-            self.add(value)
-            return
+    # def add_next(self, value): # its redundant with add method
+    #     if self.is_empty():
+    #         self.add(value)
+    #         return
         
-        new_node = ListNode(value)
-        new_node.next = self.front.next
-        self.front.next = new_node
+    #     new_node = ListNode(value)
+    #     new_node.next = self.front.next
+    #     self.front.next = new_node
 
-        if self.rear is self.front:
-            self.rear = new_node
+    #     if self.rear is self.front:
+    #         self.rear = new_node 
 
     def shuffle(self):
         if self.is_empty() or self.front.next is None:
@@ -141,3 +141,52 @@ class Queue:
         
         current_song = self.front.value
         self.add(current_song)
+        
+    def moveNodeKtoL(self, k, l):
+        if self.is_empty() or k == l:
+            return
+        
+        prev_k = None
+        curr_k = self.front
+        for _ in range(k):
+            if curr_k is None:
+                return
+            prev_k = curr_k
+            curr_k = curr_k.next
+        
+        if curr_k is None:
+            return
+        
+        if prev_k:
+            prev_k.next = curr_k.next
+        else:
+            self.front = curr_k.next
+        
+        if curr_k == self.rear:
+            self.rear = prev_k
+        
+        if l == 0:
+            curr_k.next = self.front
+            self.front = curr_k
+        else:
+            prev_l = None
+            curr_l = self.front
+            for _ in range(l):
+                if curr_l is None:
+                    break
+                prev_l = curr_l
+                curr_l = curr_l.next
+            
+            prev_l.next = curr_k
+            curr_k.next = curr_l
+            
+            if curr_l is None:
+                self.rear = curr_k
+                
+    def print(self):
+        current = self.front
+        values = []
+        while current:
+            values.append(str(current.value))
+            current = current.next
+        print("Queue:", " -> ".join(values))
