@@ -184,7 +184,7 @@ class AppWindow(ctk.CTk):
             self.audio_backend.load_music(song_path)
             self.audio_backend.play_music()
             
-            self.current_metadata = self.audio_backend.get_song_metadata(song_path)
+            self.current_metadata = self.data_manager.get_song_metadata(song_path)
             if hasattr(self, 'media_controls'):
                 self.media_controls.update_song_info(self.current_metadata)
                 self.media_controls.set_playing_state(True)
