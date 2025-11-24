@@ -1,49 +1,60 @@
 def merge_sort(lst, key=lambda x: x, reverse=False):
-    if len(lst) <= 1:
-        return lst
-    
-    mid = len(lst) // 2
-    left = merge_sort(lst[:mid], key=key, reverse=reverse)
-    right = merge_sort(lst[mid:], key=key, reverse=reverse)
-    
-    return merge(left, right, key, reverse)
+    if len(lst) > 1:  # Changed from <= 1 return to > 1 block
+        mid = len(lst) // 2
+        left = lst[:mid]
+        right = lst[mid:]
+
+        # Recurse on the slices (modifies them in place)
+        merge_sort(left, key=key, reverse=reverse)
+        merge_sort(right, key=key, reverse=reverse)
+
+        # Merge the modified slices back into the main list
+        merge(lst, left, right, key, reverse)
 
 
-def merge(left, right, key, reverse):
-    result = []
-    i = j = 0
+def merge(lst, left, right, key, reverse): # Added 'lst' as the target
+    i = j = k = 0  # Added 'k' to track position in the main list
 
     while i < len(left) and j < len(right):
         if reverse:
-            if key(left[i]) > key(right[j]):
-                result.append(left[i])
-                i += 1
-            else:
-                result.append(right[j])
-                j += 1
+            # Use key() for comparison
+            condition = key(left[i]) > key(right[j])
         else:
-            if key(left[i]) < key(right[j]):
-                result.append(left[i])
-                i += 1
-            else:
-                result.append(right[j])
-                j += 1
+            condition = key(left[i]) < key(right[j])
 
-    return result + left[i:] + right[j:]
+        if condition:
+            lst[k] = left[i] # Overwrite lst instead of appending
+            i += 1
+        else:
+            lst[k] = right[j] # Overwrite lst instead of appending
+            j += 1
+        k += 1
+
+    # Handle remaining elements (cannot use + concatenation for in-place)
+    while i < len(left):
+        lst[k] = left[i]
+        i += 1
+        k += 1
+
+    while j < len(right):
+        lst[k] = right[j]
+        j += 1
+        k += 1
 
 if __name__ == "__main__":
     # USage Examples:
     words = ["banana", "Apple", "grape", "orange"]
-    sorted_words = merge_sort(words, key=str.lower)
-    print(sorted_words)
+    merge_sort(words, key=str.lower)
+    print(words)
 
-    sorted_wordsr = merge_sort(words, key=str.lower, reverse=True)
-    print(sorted_wordsr)
-
+    merge_sort(words, key=str.lower, reverse=True)
+    print(words)
     nums = [5, 2, 100, 23, 1]
-    print(merge_sort(nums))
+    merge_sort(nums)
+    print(nums)
 
-    print(merge_sort(nums, reverse=True))
+    merge_sort(nums, reverse=True)
+    print(nums)
 
     people = [
         {"name": "Carlos", "age": 30},
@@ -51,6 +62,5 @@ if __name__ == "__main__":
         {"name": "Luis", "age": 25}
     ]
 
-    sorted_people = merge_sort(people, key=lambda x: x["age"])
-    print(sorted_people)
-
+    merge_sort(people, key=lambda x: x["age"])
+    print(people)
