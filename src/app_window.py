@@ -206,7 +206,7 @@ class AppWindow(ctk.CTk):
     def on_play_clicked(self):
         """Callback para botón Play"""
         if self.current_song_path:
-            self.audio_backend.play_music()
+            self.audio_backend.unpause_music() # play_music reinicia el progreso de la canción
 
     def on_pause_clicked(self):
         """Callback para botón Pause"""
