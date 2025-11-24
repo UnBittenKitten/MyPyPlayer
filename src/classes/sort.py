@@ -18,9 +18,9 @@ def merge(lst, left, right, key, reverse): # Added 'lst' as the target
     while i < len(left) and j < len(right):
         if reverse:
             # Use key() for comparison
-            condition = key(left[i]) > key(right[j])
+            condition = key(left[i]) >= key(right[j])
         else:
-            condition = key(left[i]) < key(right[j])
+            condition = key(left[i]) <= key(right[j])
 
         if condition:
             lst[k] = left[i] # Overwrite lst instead of appending

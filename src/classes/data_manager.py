@@ -2,6 +2,11 @@ import sqlite3
 import os
 import json
 
+from mutagen._file import File
+from PIL import Image
+import io
+import customtkinter as ctk
+
 class DataManager:
     def __init__(self, app_name="MyPyPlayer"):
         self.app_name = app_name
@@ -98,11 +103,14 @@ class DataManager:
     # --- Playlist Management ---
 
     def create_playlist(self, name):
+        # print("Creating playlist:", name)
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("INSERT INTO playlists (name) VALUES (?)", (name,))
+                # print("Created playlist:", name)
                 return True
         except sqlite3.IntegrityError:
+            print(f"Playlist '{name}' already exists.")
             return False
         except Exception as e:
             print(f"DB Error (create_playlist): {e}")
@@ -207,6 +215,78 @@ class DataManager:
         except Exception as e:
             print(f"DB Error (remove_song_from_playlist): {e}")
             return False
+        
+    def get_song_metadata(self, file_path):
+        """
+        Extracts metadata using Mutagen.
+        Returns a dictionary with title, artist, duration, and album_art (CTkImage).
+        """
+        data = {
+            "title": "Unknown Title",
+            "artist": "Unknown Artist",
+            "duration": "00:00",
+            "album_art": None,
+            "album": "Unknown Album"
+        }
+
+        try:
+            audio = File(file_path)
+            if audio is None:
+                return data
+
+            # --- 1. Get Text Tags (Artist/Title) ---
+            # Mutagen tags vary by format (ID3 for mp3, Vorbis for flac)
+            # This is a simplified generic lookup
+            
+            # EasyMP3 / ID3
+            if 'TIT2' in audio.tags: data['title'] = str(audio.tags['TIT2'])
+            if 'TPE1' in audio.tags: data['artist'] = str(audio.tags['TPE1'])
+            
+            # FLAC / OGG / MP4 (Common keys)
+            if 'title' in audio.tags: data['title'] = str(audio.tags['title'][0])
+            if 'artist' in audio.tags: data['artist'] = str(audio.tags['artist'][0])
+            
+            # Fallback: Use filename if title is missing
+            if data['title'] == "Unknown Title":
+                data['title'] = file_path.split("/")[-1]
+
+            # --- 2. Get Duration ---
+            if audio.info and audio.info.length:
+                minutes = int(audio.info.length // 60)
+                seconds = int(audio.info.length % 60)
+                data['duration'] = f"{minutes:02}:{seconds:02}"
+                
+            # Album
+            if 'TALB' in audio.tags: data['album'] = str(audio.tags['TALB'])
+            if 'album' in audio.tags: data['album'] = str(audio.tags['album'][0])
+
+            # --- 3. Get Album Art ---
+            # This is the tricky part. We look for APIC (MP3) or covr (MP4) frames.
+            artwork_data = None
+            
+            # MP3 (ID3)
+            if hasattr(audio, 'tags') and audio.tags:
+                for tag in audio.tags.values():
+                    if tag.FrameID == 'APIC':
+                        artwork_data = tag.data
+                        break
+            
+            # FLAC (Picture)
+            if not artwork_data and hasattr(audio, 'pictures') and audio.pictures:
+                artwork_data = audio.pictures[0].data
+
+            # Create CTkImage if we found art
+            if artwork_data:
+                image = Image.open(io.BytesIO(artwork_data))
+                # Resize for UI (e.g., 200x200)
+                data['album_art'] = ctk.CTkImage(light_image=image, 
+                                                 dark_image=image, 
+                                                 size=(200, 200))
+            
+        except Exception as e:
+            print(f"Error reading metadata: {e}")
+
+        return data
 
             
     # --- UI Settings Management ---
