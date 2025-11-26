@@ -1,4 +1,5 @@
 import warnings
+# Filter out the specific warning about pkg_resources
 warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
 import customtkinter as ctk
 import tkinter as tk
@@ -22,7 +23,11 @@ except ImportError:
     pass
 
 class AppWindow(ctk.CTk):
+    """
+    Main application window class, inheriting from customtkinter.CTk.
+    """
     def __init__(self, *args, **kwargs):
+        # Call the parent class constructor
         super().__init__(*args, **kwargs)
 
         # --- Data Manager (Init First) ---
@@ -59,7 +64,7 @@ class AppWindow(ctk.CTk):
         except Exception:
             pass
         
-        # Style configuration
+        # Style configuration for the draggable dividers (sashes)
         pane_config = {
             "bd": 0,
             "sashwidth": 4,
@@ -96,7 +101,6 @@ class AppWindow(ctk.CTk):
             self.sources_component = sources_pane.add_to(
                 self.sec2,
                 self.data_manager,
-                # CONECTAR CON AUDIO BACKEND
                 on_folder_click=lambda path: self.on_folder_selected(path)
             )
         except Exception as e:
@@ -147,7 +151,9 @@ class AppWindow(ctk.CTk):
                 on_play=self.on_play_clicked,
                 on_pause=self.on_pause_clicked,
                 on_stop=self.on_stop_clicked,
-                on_volume_change=self.on_volume_changed
+                on_volume_change=self.on_volume_changed,
+                on_previous=self.on_previous_clicked,
+                on_next=self.on_next_clicked
             )
         except Exception as e:
             print(f"Media controls load error: {e}")
@@ -156,10 +162,17 @@ class AppWindow(ctk.CTk):
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
+    def on_previous_clicked(self):
+        """Maneja el botón anterior"""
+        print("Previous song clicked")
+
+    def on_next_clicked(self):
+        """Maneja el botón siguiente"""
+        print("Next song clicked")
+
     def on_folder_selected(self, folder_path):
         """Cuando se hace clic en una carpeta en Sources Pane"""
         print(f"Folder selected: {folder_path}")
-        # Cargar archivos de audio de la carpeta en el Explorer Pane
         if hasattr(self, 'explorer_component'):
             self.explorer_component.load_folder(folder_path)
 
@@ -175,25 +188,17 @@ class AppWindow(ctk.CTk):
             self.current_metadata = self.data_manager.get_song_metadata(song_path)
             if hasattr(self, 'media_controls'):
                 self.media_controls.update_song_info(self.current_metadata)
+                self.media_controls.set_playing_state(True)
             
         except Exception as e:
             print(f"Error loading song: {e}")
 
-    def update_now_playing_ui(self, metadata):
-        """Actualiza la sección Now Playing con metadata"""
-        self.song_title_label.configure(text=metadata["title"])
-        self.artist_label.configure(text=metadata["artist"])
-        self.duration_label.configure(text=metadata["duration"])
-        
-        if metadata["album_art"]:
-            self.album_art_label.configure(image=metadata["album_art"], text="")
-        else:
-            self.album_art_label.configure(image=None, text="No Art")
+    # --- REMOVED update_now_playing_ui (It was dead code causing errors) ---
 
     def on_play_clicked(self):
         """Callback para botón Play"""
         if self.current_song_path:
-            self.audio_backend.play_music()
+            self.audio_backend.unpause_music()
 
     def on_pause_clicked(self):
         """Callback para botón Pause"""
