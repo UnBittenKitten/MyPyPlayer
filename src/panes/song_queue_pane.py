@@ -10,6 +10,7 @@ class SongQueuePane:
         
         self._build_ui()
         
+        
     def _build_ui(self):
         # Title Label
         title_frame = ctk.CTkFrame(self.parent, fg_color="transparent")
@@ -40,7 +41,8 @@ class SongQueuePane:
             self.placeholder_label.pack_forget()
         
         # Crear item de la cola
-        queue_item = QueueItem(self.queue_list, song_path, len(self.queue_items))
+        #queue_item = QueueItem(self.queue_list, song_path, len(self.queue_items)) ------ this one below 1 line
+        queue_item = QueueItem(self.queue_list, song_path, len(self.queue_items), self)
         queue_item.pack(fill="x", pady=2)
         
         self.queue_items.append({
@@ -72,13 +74,61 @@ class SongQueuePane:
             if not self.queue_items:
                 self.placeholder_label.pack(pady=40)
 
+
+    #marcador de posicion, aun no esta lista
+    def request_move(self, old_index, new_pos):
+        # validar numero 
+        try:
+            new_pos = int(float(new_pos))
+        except:
+            return # si no es un numero ni continuamos 
+        
+        if new_pos < 1:
+            new_pos = 1 
+            # aun debo encontrar la instancia principal
+        if new_pos > self.queue_backend.lenght():
+            new_pos = self.queue_backend.length()
+
+        new_index = new_pos -1 #convertir a base 0
+
+        #mover en backend
+        self.queue_backend.MoveNodeKtoL(old_index, new_index)
+
+        #mover en frontend
+        self._move_frontend_item(old_index, new_index)
+
+
+    def _move_frontend_item(self,old,new):
+        item = self.queue_items.pop(old)
+        self.queue_items.insert(new,item)
+
+        #reconstruir UI visual
+        for child in self.queue_list.winfo_children():
+            child.pack_forget()
+
+        for i, item in enumerate(self.queue_items):
+            item['widget'].update_index(i)
+            item['widget'].pack(fill="x", pady = 2)
+
+#—————————————————————————————————————————————————————————————————————————————————————————————————>
 class QueueItem(ctk.CTkFrame):
+    
+    '''
     def __init__(self, parent, song_path, index):
         super().__init__(parent, fg_color="#333333", height=40)
         self.song_path = song_path
         self.index = index
         
+        self._build_ui()'''
+
+    def __init__(self, parent, song_path, index, controller):
+        super().__init__(parent, fg_color="#333333", height=40)
+        self.song_path = song_path
+        self.index = index
+        self.controller = controller  # 🔥 acceso al SongQueuePane
+        
         self._build_ui()
+
         
     def _build_ui(self):
         # Número de posición
@@ -103,6 +153,29 @@ class QueueItem(ctk.CTkFrame):
                                  hover_color="#96221F",
                                  command=self._remove_self)
         remove_btn.pack(side="right", padx=5)
+
+        #hacer doble clic
+        self.bind("<Double-Button-1>",self._on_double_click)
+        for widget in self.winfo_children():
+            widget.bind("<Double-Button-1", self._on_double_click)
+
+    def _on_double_click(self,event):
+        popup = ctk.CTkToplevel(self)
+        popup.geometry(f"+{event.x_root}+{event.y_root}")
+        popup.overrideredirect(True) #no bordes 
+
+        entry = ctk.CTkEntry(popup, width= 80)
+        entry.pack(padx=5, pady = 5)
+        entry.focus()
+
+        def on_enter(event=None):
+            new_pos = entry.get()
+            popup.destroy()
+            self.controller.request_move(self.index, new_pos)
+        
+        entry.bind("<Return>", on_enter)
+
+
 
     def update_index(self, new_index):
         """Actualiza el número de posición"""
