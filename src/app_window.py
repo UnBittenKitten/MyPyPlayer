@@ -88,7 +88,7 @@ class AppWindow(ctk.CTk):
             self.playlists_component = playlists_pane.add_to(
                 self.sec1,
                 self.data_manager,
-                on_playlist_click=lambda path: print(f"Playlist clicked: {path}")
+                on_playlist_click=lambda name: self.on_playlist_selected(name)
             )
         except Exception as e:
             print(f"Playlists pane load error: {e}")
@@ -175,6 +175,12 @@ class AppWindow(ctk.CTk):
         print(f"Folder selected: {folder_path}")
         if hasattr(self, 'explorer_component'):
             self.explorer_component.load_folder(folder_path)
+
+    def on_playlist_selected(self, playlist_name):
+        """Cuando se hace clic en una playlist en Playlists Pane"""
+        print(f"Playlist selected: {playlist_name}")
+        self.explorer_component.load_playlist(playlist_name)
+        # if hasattr(self, 'explorer_component'):
 
     def on_song_selected(self, song_path):
         """Cuando se hace clic en una canción en Explorer Pane"""
