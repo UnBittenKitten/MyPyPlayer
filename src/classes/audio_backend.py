@@ -16,8 +16,17 @@ class AudioBackend:
         self.current_file = file_path
         try:
             pygame.mixer.music.load(file_path)
-            sound = pygame.mixer.Sound(file_path)
-            self.song_length = sound.get_length()
+            self.current_song_path = file_path # Update current
+            print(f"Loaded: {file_path}")
+        except pygame.error as e:
+            print(f"Error loading music file: {e}")
+            raise e # Re-raise to let the app know
+
+    def play_music(self):
+        try:
+            pygame.mixer.music.play()
+            self.paused = False
+            print("Playback started.")
         except pygame.error as e:
             print(f"Error loading file: {e}")
             self.song_length = 0
@@ -54,14 +63,16 @@ class AudioBackend:
         self._last_update_time = time.time()
 
     def stop_music(self):
-        """Stops playback completely."""
         pygame.mixer.music.stop()
         self._is_playing = False
         self._current_position = 0
 
     def set_volume(self, volume):
-        """Sets volume from 0.0 to 1.0"""
-        pygame.mixer.music.set_volume(volume)
+        # Ensure volume is float 0.0 to 1.0
+        try:
+            pygame.mixer.music.set_volume(float(volume))
+        except Exception:
+            pass
 
     def get_pos(self):
         """Returns current playback position in seconds."""
@@ -106,6 +117,13 @@ class AudioBackend:
     def is_playing(self):
         return self._is_playing and not self.is_paused
 
+    def has_song_ended(self):
+        """
+        Checks if the current song has ended.
+        Note: This returns True if the player is idle (stopped).
+        """
+        return not pygame.mixer.music.get_busy() and not self.paused
+    
     def get_song_length(self):
         """Returns the total length of the current song in seconds."""
         return getattr(self, 'song_length', 0)
