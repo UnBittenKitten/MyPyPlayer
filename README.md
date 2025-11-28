@@ -3,9 +3,12 @@
 A simple song player built with CustomTkinter and Python.
 
 It supports basic functionalities like play, pause, next, previous.
+
 You can add folders to explore and play songs from your local directories.
+
 You can create playlists to organize your music.
 It has a song queue feature to manage upcoming tracks.
+
 And you can play previously played songs.
 
 # How to set up environment
