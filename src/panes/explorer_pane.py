@@ -9,13 +9,17 @@ class ExplorerPane:
         self.on_song_click = on_song_click
         self.current_folder = None
         self.current_playlist = None 
+
+        self.is_sorting_reverse = False
+        self.is_sorting_by = "title"  # 'title', 'artist', 'album', 'duration'
         
         self.song_list = song_list.SongList(self.db)
         self._build_ui()
         
     def _build_ui(self):
         self.title_label = ctk.CTkLabel(self.parent, text="File Explorer", 
-                                      font=("Arial", 16, "bold"))
+                                      font=("Arial", 16, "bold"))        
+
         self.title_label.pack(pady=(10, 5))
         
         self.path_label = ctk.CTkLabel(self.parent, text="No folder selected", 
@@ -25,14 +29,118 @@ class ExplorerPane:
         header_frame = ctk.CTkFrame(self.parent, fg_color="transparent", height=30)
         header_frame.pack(fill="x", padx=5, pady=(5, 0))
         
-        ctk.CTkLabel(header_frame, text="Title", anchor="w", font=("Arial", 12, "bold"), text_color="gray").pack(side="left", padx=(15, 5), fill="x", expand=True)
-        ctk.CTkLabel(header_frame, text="Artist", anchor="w", width=120, font=("Arial", 12, "bold"), text_color="gray").pack(side="left", padx=5)
-        ctk.CTkLabel(header_frame, text="Album", anchor="w", width=120, font=("Arial", 12, "bold"), text_color="gray").pack(side="left", padx=5)
-        ctk.CTkLabel(header_frame, text="Time", anchor="center", width=60, font=("Arial", 12, "bold"), text_color="gray").pack(side="left", padx=5)
+        # --- TITLE HEADER (Clickable) ---
+        self.header_title = ctk.CTkLabel(header_frame, text="Title", anchor="w", 
+                                         font=("Arial", 12, "bold"), text_color="gray",
+                                         cursor="hand2") # Hand cursor
+        self.header_title.pack(side="left", padx=(15, 5), fill="x", expand=True)
+        
+        # Bind Click
+        self.header_title.bind("<Button-1>", lambda e: self.title_lable_click())
+        
+        # Bind Hover Effects
+        self.header_title.bind("<Enter>", lambda e: self.header_title.configure(text_color="#DCE4EE")) # Lighter on hover
+        self.header_title.bind("<Leave>", lambda e: self.header_title.configure(text_color="gray")) # Back to gray
+        
+        # --- ARTIST HEADER (Clickable) ---
+        self.header_artist = ctk.CTkLabel(header_frame, text="Artist", anchor="w", width=120, 
+                                          font=("Arial", 12, "bold"), text_color="gray", 
+                                          cursor="hand2")
+        self.header_artist.pack(side="left", padx=5)
+        
+        # Bind Click
+        self.header_artist.bind("<Button-1>", lambda e: self.artist_label_click())
+        
+        # Bind Hover Effects
+        self.header_artist.bind("<Enter>", lambda e: self.header_artist.configure(text_color="#DCE4EE")) # Lighter on hover
+        self.header_artist.bind("<Leave>", lambda e: self.header_artist.configure(text_color="gray")) # Back to gray
+        
+        # --- ALBUM HEADER (Clickable) ---
+        self.header_album = ctk.CTkLabel(header_frame, text="Album", anchor="w", width=120, 
+                                         font=("Arial", 12, "bold"), text_color="gray", 
+                                         cursor="hand2")
+        self.header_album.pack(side="left", padx=5)
+        
+        # Bind Click
+        self.header_album.bind("<Button-1>", lambda e: self.album_label_click())
+        
+        # Bind Hover Effects
+        self.header_album.bind("<Enter>", lambda e: self.header_album.configure(text_color="#DCE4EE")) # Lighter on hover
+        self.header_album.bind("<Leave>", lambda e: self.header_album.configure(text_color="gray")) # Back to gray
+        
+        # --- DURATION HEADER (Clickable) ---
+        self.header_duration = ctk.CTkLabel(header_frame, text="Time", anchor="center", width=60, 
+                                            font=("Arial", 12, "bold"), text_color="gray", 
+                                            cursor="hand2")
+        self.header_duration.pack(side="left", padx=5)
+        
+        # Bind Click
+        self.header_duration.bind("<Button-1>", lambda e: self.duration_label_click())
+        
+        # Bind Hover Effects
+        self.header_duration.bind("<Enter>", lambda e: self.header_duration.configure(text_color="#DCE4EE")) # Lighter on hover
+        self.header_duration.bind("<Leave>", lambda e: self.header_duration.configure(text_color="gray")) # Back to gray
+        
         ctk.CTkFrame(header_frame, width=75, height=1, fg_color="transparent").pack(side="right")
 
         self.scroll_list = ctk.CTkScrollableFrame(self.parent, fg_color="transparent")
         self.scroll_list.pack(fill="both", expand=True, padx=5, pady=5)
+
+    def title_lable_click(self):
+        if self.is_sorting_by == "title":
+            self.is_sorting_reverse = not self.is_sorting_reverse
+
+        self.is_sorting_by = "title"
+
+        self.song_list.sortBy("title", reverse=self.is_sorting_reverse)
+        
+        for widget in self.scroll_list.winfo_children():
+            widget.destroy()
+        
+        for song_data in self.song_list.songlst:
+            self._add_song_to_list(song_data, is_folder=(self.current_folder is not None))
+
+    def artist_label_click(self):
+        if self.is_sorting_by == "artist":
+            self.is_sorting_reverse = not self.is_sorting_reverse
+
+        self.is_sorting_by = "artist"
+
+        self.song_list.sortBy("artist", reverse=self.is_sorting_reverse)
+        
+        for widget in self.scroll_list.winfo_children():
+            widget.destroy()
+        
+        for song_data in self.song_list.songlst:
+            self._add_song_to_list(song_data, is_folder=(self.current_folder is not None))
+
+    def album_label_click(self):
+        if self.is_sorting_by == "album":
+            self.is_sorting_reverse = not self.is_sorting_reverse
+
+        self.is_sorting_by = "album"
+
+        self.song_list.sortBy("album", reverse=self.is_sorting_reverse)
+        
+        for widget in self.scroll_list.winfo_children():
+            widget.destroy()
+        
+        for song_data in self.song_list.songlst:
+            self._add_song_to_list(song_data, is_folder=(self.current_folder is not None))
+
+    def duration_label_click(self):
+        if self.is_sorting_by == "duration":
+            self.is_sorting_reverse = not self.is_sorting_reverse
+
+        self.is_sorting_by = "duration"
+
+        self.song_list.sortBy("duration", reverse=self.is_sorting_reverse)
+        
+        for widget in self.scroll_list.winfo_children():
+            widget.destroy()
+        
+        for song_data in self.song_list.songlst:
+            self._add_song_to_list(song_data, is_folder=(self.current_folder is not None))
 
     def load_folder(self, folder_path):
         self.current_folder = folder_path
@@ -79,6 +187,10 @@ class ExplorerPane:
         album = song_data.get("album", "Unknown")
         duration = song_data.get("duration", 0)
         duration_text = duration
+
+        # truncate title if too long
+        if len(title) > 30:
+            title = title[:27] + "..."
 
         lbl_title = ctk.CTkLabel(row, text=title, anchor="w", cursor="hand2", font=("Arial", 13, "bold"))
         lbl_title.pack(side="left", padx=(10, 5), pady=5, fill="x", expand=True)

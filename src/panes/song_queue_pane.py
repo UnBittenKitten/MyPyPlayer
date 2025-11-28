@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import os
-from classes.queue import Queue 
+from classes.queue import Queue
+from classes.stack import Stack 
 
 # If you have the Stack class, uncomment this. 
 # For now, we comment it out to ensure the Queue works first.
@@ -83,7 +84,8 @@ class SongQueuePane:
         })
 
     def pop_next_song(self):
-        """Removes the first song from the queue and returns its path."""
+        """Removes the first song from the queue and returns its path
+        and adds the song to the past songs stack."""
         if not self.queue_items:
             return None
         
