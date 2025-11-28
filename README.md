@@ -67,7 +67,7 @@ And you can play previously played songs.
    ```
 
 # Contributors
-- Luis Perez (UnBittenKitten) - Developer, created the file explorer.
-- Roberto Carlos (ZULINOSITY) - Developer, created the media controls and made the ux better.
-- Nathanael Hernandez (nathah3rnandez-dotcom) - Developer, created the song queue pane and the required logic for it.
-- Jonathan Javier (FudgeBit) - Developer, created the playlist pane and the sources management system.
+- Luis Perez [UnBittenKitten](https://github.com/UnBittenKitten) - Developer, created the file explorer.
+- Roberto Carlos [ZULINOSITY](https://github.com/ZULINOSITY) - Developer, created the media controls and made the ux better.
+- Nathanael Hernandez [nathah3rnandez-dotcom](https://github.com/nathah3rnandez-dotcom) - Developer, created the song queue pane and the required logic for it.
+- Jonathan Javier [FudgeBit](https://github.com/FudgeBit) - Developer, created the playlist pane and the sources management system.
