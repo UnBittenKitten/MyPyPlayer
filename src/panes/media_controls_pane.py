@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import time
 
 class MediaControlsPane:
     def __init__(self, parent_frame, audio_backend, queue_component=None, on_play=None, on_pause=None, 
@@ -20,8 +21,8 @@ class MediaControlsPane:
         self.PROGRESS_SLIDER_LENGTH = 400
         self.VOLUME_SLIDER_WIDTH = 80
         
-        # Timer para actualizar el progreso
-        self.progress_timer = None
+        # ID del after para el progreso
+        self.progress_after_id = None
         
         self._build_ui()
         
@@ -95,53 +96,53 @@ class MediaControlsPane:
         # Botón atrasar
         self.backward_btn = ctk.CTkLabel(controls_frame, text="↺", width=40, height=40,
                                 font=("Arial", 24),
-                                text_color="#CCCCCC",  # Gris claro normal
-                                cursor="hand2")  # Cursor de mano al pasar
+                                text_color="#CCCCCC",
+                                cursor="hand2")
         self.backward_btn.pack(side="left", padx=5)
-        self.backward_btn.bind("<Button-1>", lambda e: self._on_next())
-        self.backward_btn.bind("<Enter>", lambda e: self.backward_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
-        self.backward_btn.bind("<Leave>", lambda e: self.backward_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+        self.backward_btn.bind("<Button-1>", lambda e: self._on_backward())
+        self.backward_btn.bind("<Enter>", lambda e: self.backward_btn.configure(text_color="#FFFFFF"))
+        self.backward_btn.bind("<Leave>", lambda e: self.backward_btn.configure(text_color="#CCCCCC"))
 
         # Botón anterior
         self.previous_btn = ctk.CTkLabel(controls_frame, text="<<", width=40, height=40,
                                     font=("Arial", 18), 
-                                    text_color="#CCCCCC",  # Gris claro normal
-                                    cursor="hand2")  # Cursor de mano al pasar
+                                    text_color="#CCCCCC",
+                                    cursor="hand2")
         self.previous_btn.pack(side="left", padx=5)
         self.previous_btn.bind("<Button-1>", lambda e: self._on_previous())
-        self.previous_btn.bind("<Enter>", lambda e: self.previous_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
-        self.previous_btn.bind("<Leave>", lambda e: self.previous_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+        self.previous_btn.bind("<Enter>", lambda e: self.previous_btn.configure(text_color="#FFFFFF"))
+        self.previous_btn.bind("<Leave>", lambda e: self.previous_btn.configure(text_color="#CCCCCC"))
         
         # Botón play/pause
         self.play_pause_btn = ctk.CTkButton(controls_frame, text="▶", width=50, height=50,
                                           font=("Arial", 22), command=self._on_play_pause,
-                                          fg_color="#000000",  # Negro
-                                          hover_color="#333333",  # Negro más claro al hover
-                                          text_color="#FFFFFF",  # Texto blanco
-                                          corner_radius=25)  # Circular (50% del tamaño)
+                                          fg_color="#000000",
+                                          hover_color="#333333",
+                                          text_color="#FFFFFF",
+                                          corner_radius=25)
         self.play_pause_btn.pack(side="left", padx=10)
         
         # Botón siguiente
         self.next_btn = ctk.CTkLabel(controls_frame, text=">>", width=40, height=40,
                                 font=("Arial", 18),
-                                text_color="#CCCCCC",  # Gris claro normal
-                                cursor="hand2")  # Cursor de mano al pasar
+                                text_color="#CCCCCC",
+                                cursor="hand2")
         self.next_btn.pack(side="left", padx=5)
         self.next_btn.bind("<Button-1>", lambda e: self._on_next())
-        self.next_btn.bind("<Enter>", lambda e: self.next_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
-        self.next_btn.bind("<Leave>", lambda e: self.next_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+        self.next_btn.bind("<Enter>", lambda e: self.next_btn.configure(text_color="#FFFFFF"))
+        self.next_btn.bind("<Leave>", lambda e: self.next_btn.configure(text_color="#CCCCCC"))
 
         # Botón adelantar
         self.forward_btn = ctk.CTkLabel(controls_frame, text="↻", width=40, height=40,
                                 font=("Arial", 24),
-                                text_color="#CCCCCC",  # Gris claro normal
-                                cursor="hand2")  # Cursor de mano al pasar
+                                text_color="#CCCCCC",
+                                cursor="hand2")
         self.forward_btn.pack(side="left", padx=5)
-        self.forward_btn.bind("<Button-1>", lambda e: self._on_next())
-        self.forward_btn.bind("<Enter>", lambda e: self.forward_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
-        self.forward_btn.bind("<Leave>", lambda e: self.forward_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+        self.forward_btn.bind("<Button-1>", lambda e: self._on_forward())
+        self.forward_btn.bind("<Enter>", lambda e: self.forward_btn.configure(text_color="#FFFFFF"))
+        self.forward_btn.bind("<Leave>", lambda e: self.forward_btn.configure(text_color="#CCCCCC"))
         
-        # Fila 2: Progress Bar (SOLO VISUAL - sin funcionalidad de seek)
+        # Progress bar
         progress_frame = ctk.CTkFrame(center_frame, fg_color="transparent")
         progress_frame.grid(row=2, column=0, sticky="ew", pady=5)
         
@@ -157,7 +158,7 @@ class MediaControlsPane:
         self.progress_slider = ctk.CTkSlider(time_frame, from_=0, to=100, 
                                            width=self.PROGRESS_SLIDER_LENGTH, height=12, 
                                            progress_color="#1f6aa5",
-                                           state="disabled")  # Deshabilitado
+                                           command=self._on_progress_seek)
         self.progress_slider.set(0)
         self.progress_slider.pack(side="left", fill="x", expand=True, padx=10)
         
@@ -195,6 +196,53 @@ class MediaControlsPane:
         self.volume_slider.set(0.5)
         self.volume_slider.pack(side="left")
 
+    def _on_progress_seek(self, value):
+        """Maneja cuando el usuario mueve la barra de progreso"""
+        if self.total_time > 0:
+            new_position = (value / 100.0) * self.total_time
+            self.audio_backend.set_pos(new_position)
+            self.current_time = new_position
+            self._update_time_display()
+
+    def _on_backward(self):
+        """Atrasa la canción 5 segundos"""
+        if self.audio_backend.current_file:
+            current_pos = self.audio_backend.get_pos()
+            new_pos = max(0, current_pos - 5)
+            self.audio_backend.set_pos(new_pos)
+            self.current_time = new_pos
+            self._update_time_display()
+
+    def _on_forward(self):
+        """Adelanta la canción 5 segundos"""
+        if self.audio_backend.current_file:
+            current_pos = self.audio_backend.get_pos()
+            new_pos = min(self.total_time, current_pos + 5)
+            self.audio_backend.set_pos(new_pos)
+            self.current_time = new_pos
+            self._update_time_display()
+
+    def _update_time_display(self):
+        """Actualiza la visualización del tiempo y progress bar"""
+        # Actualizar label de tiempo actual
+        mins = int(self.current_time // 60)
+        secs = int(self.current_time % 60)
+        self.current_time_label.configure(text=f"{mins}:{secs:02d}")
+        
+        # Actualizar progress bar
+        if self.total_time > 0:
+            progress = (self.current_time / self.total_time) * 100
+            self.progress_slider.set(progress)
+            
+            # CALCULAR Y MOSTRAR TIEMPO RESTANTE (NEGATIVO)
+            time_remaining = self.total_time - self.current_time
+            remaining_mins = int(time_remaining // 60)
+            remaining_secs = int(time_remaining % 60)
+            
+            # Mostrar en formato negativo: -MM:SS
+            self.total_time_label.configure(text=f"-{remaining_mins}:{remaining_secs:02d}")
+
+
     def update_song_info(self, metadata):
         """Actualiza la metadata de la canción actual"""
         self.current_metadata = metadata
@@ -205,24 +253,26 @@ class MediaControlsPane:
         # Usar la duración del audio backend
         self.total_time = self.audio_backend.get_song_length()
         
-        # Actualizar etiqueta de tiempo total
+        # Actualizar etiqueta de tiempo total (mostrar tiempo restante completo al inicio)
         if self.total_time > 0:
+            # Al inicio, mostrar el tiempo total como negativo
             mins = int(self.total_time // 60)
             secs = int(self.total_time % 60)
-            self.total_time_label.configure(text=f"{mins}:{secs:02d}")
+            self.total_time_label.configure(text=f"-{mins}:{secs:02d}")
         else:
             # Fallback a metadata si no hay duración del backend
             try:
                 if ":" in metadata["duration"]:
                     mins, secs = metadata["duration"].split(":")
                     self.total_time = int(mins) * 60 + int(secs)
-                    self.total_time_label.configure(text=metadata["duration"])
+                    # Mostrar como tiempo restante negativo
+                    self.total_time_label.configure(text=f"-{mins}:{secs}")
                 else:
                     self.total_time = 0
-                    self.total_time_label.configure(text="0:00")
+                    self.total_time_label.configure(text="-0:00")
             except:
                 self.total_time = 0
-                self.total_time_label.configure(text="0:00")
+                self.total_time_label.configure(text="-0:00")
         
         self.current_time = 0
         self.current_time_label.configure(text="0:00")
@@ -234,94 +284,83 @@ class MediaControlsPane:
         else:
             self.album_art_label.configure(image=None, text="🎵")
         
-        # Iniciar timer de progreso si la canción está reproduciéndose
-        self._start_progress_timer()
+        # Iniciar actualización de progreso
+        self._start_progress_update()
 
-    def _start_progress_timer(self):
-        """Inicia el timer para actualizar el progreso de reproducción"""
-        self._stop_progress_timer()
+    def _start_progress_update(self):
+        """Inicia la actualización continua del progreso usando after()"""
+        self._stop_progress_update()
         if self.is_playing and self.total_time > 0:
-            self.progress_timer = self.parent.after(100, self._update_progress)
+            self._update_progress()
 
-    def _stop_progress_timer(self):
-        """Detiene el timer de progreso"""
-        if self.progress_timer:
-            self.parent.after_cancel(self.progress_timer)
-            self.progress_timer = None
+    def _stop_progress_update(self):
+        """Detiene la actualización del progreso"""
+        if self.progress_after_id:
+            self.parent.after_cancel(self.progress_after_id)
+            self.progress_after_id = None
 
     def _update_progress(self):
-        """Actualiza el progreso de reproducción cada 100ms"""
+        """Actualiza el progreso usando after() para programar la siguiente actualización"""
         if self.is_playing and self.total_time > 0:
-            # Obtener posición actual desde el audio backend
-            current_pos = self.audio_backend.get_pos()
+            # Obtener posición actual del backend
+            self.current_time = self.audio_backend.get_pos()
             
             # Verificar si la canción ha terminado
-            if current_pos < self.current_time:  # Se reinició (canción terminó)
-                self.current_time = 0
+            if self.current_time >= self.total_time - 0.5:  # Margen pequeño
                 self._on_song_end()
-            else:
-                self.current_time = current_pos
+                return
+                
+            self._update_time_display()
             
-            # Actualizar labels de tiempo
-            mins = int(self.current_time // 60)
-            secs = int(self.current_time % 60)
-            self.current_time_label.configure(text=f"{mins}:{secs:02d}")
-            
-            # Actualizar slider (solo visual)
-            if self.total_time > 0:
-                progress = (self.current_time / self.total_time) * 100
-                self.progress_slider.set(progress)
-            
-            # Programar siguiente actualización
-            self.progress_timer = self.parent.after(100, self._update_progress)
-        else:
-            self._stop_progress_timer()
+            # Programar siguiente actualización en 100ms
+            self.progress_after_id = self.parent.after(100, self._update_progress)
 
     def _on_song_end(self):
         """Maneja el final de la canción"""
         self.is_playing = False
         self.play_pause_btn.configure(text="▶")
-        self._stop_progress_timer()
+        self._stop_progress_update()
+        # Opcional: reproducir siguiente canción automáticamente
+        if self.on_next:
+            self.on_next()
 
     def _on_play_pause(self):
         """Maneja el botón play/pause"""
-        if self.is_playing:
+        if self.audio_backend.is_playing():
             # Pausar
+            self.audio_backend.pause_music()
             self.is_playing = False
             self.play_pause_btn.configure(text="▶")
-            self._stop_progress_timer()
+            self._stop_progress_update()
             if self.on_pause:
                 self.on_pause()
         else:
             # Reproducir
-            self.is_playing = True
-            self.play_pause_btn.configure(text="II")
-            self._start_progress_timer()
-            if self.on_play:
-                self.on_play()
+            if self.audio_backend.current_file:
+                if self.audio_backend.is_paused:
+                    self.audio_backend.unpause_music()
+                else:
+                    self.audio_backend.play_music()
+                self.is_playing = True
+                self.play_pause_btn.configure(text="II")
+                self._start_progress_update()
+                if self.on_play:
+                    self.on_play()
 
     def _on_previous(self):
         """Maneja el botón anterior"""
         if self.current_time > 5:  # Si lleva más de 5 segundos, reiniciar canción
             self.audio_backend.set_pos(0)
             self.current_time = 0
-            self.current_time_label.configure(text="0:00")
-            self.progress_slider.set(0)
-            # Mantener el estado de reproducción actual
-            if self.is_playing:
-                self.audio_backend.unpause_music()
+            self._update_time_display()
         else:  # Si son menos de 5 segundos, canción anterior
             if self.on_previous:
                 self.on_previous()
-            else:
-                print("No previous song handler")
 
     def _on_next(self):
         """Maneja el botón siguiente"""
         if self.on_next:
             self.on_next()
-        else:
-            print("No next song handler")
 
     def _on_volume_change(self, value):
         """Maneja el cambio de volumen"""
@@ -333,10 +372,10 @@ class MediaControlsPane:
         self.is_playing = playing
         if playing:
             self.play_pause_btn.configure(text="II")
-            self._start_progress_timer()
+            self._start_progress_update()
         else:
             self.play_pause_btn.configure(text="▶")
-            self._stop_progress_timer()
+            self._stop_progress_update()
 
     def reset_progress(self):
         """Reinicia el progreso cuando cambia la canción"""
@@ -346,8 +385,8 @@ class MediaControlsPane:
         self._start_progress_timer()
 
     def destroy(self):
-        """Limpia los timers al destruir"""
-        self._stop_progress_timer()
+        """Limpia los after al destruir"""
+        self._stop_progress_update()
         if hasattr(super(), 'destroy'):
             super().destroy()
 
