@@ -100,6 +100,7 @@ class AppWindow(ctk.CTk):
             )
         except: pass
 
+        self.bind_keys()
         self.check_for_song_end()
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -161,6 +162,44 @@ class AppWindow(ctk.CTk):
             apply_ratio(self.right_pane, "ratio_right", True)
             apply_ratio(self.right_top_pane, "ratio_right_top", False)
         except: pass
+
+    def bind_keys(self):
+        self.bind('<space>', lambda e: self._trigger_play_pause())
+        self.bind('<Right>', lambda e: self._trigger_forward())
+        self.bind('<Left>', lambda e: self._trigger_backward())
+        self.bind('<Control-Right>', lambda e: self._trigger_next())
+        self.bind('<Control-Left>', lambda e: self._trigger_previous())
+        self.bind('<KeyPress>', self._prevent_arrow_focus)
+
+    def _prevent_arrow_focus(self, event):
+        """Previene que las flechas cambien el foco entre widgets"""
+        if event.keysym in ('Left', 'Right') and not event.state & 0x4:  # 0x4 es Ctrl
+            return "break"
+
+    def _trigger_play_pause(self):
+        """Dispara el botón play/pause"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_play_pause()
+
+    def _trigger_forward(self):
+        """Dispara el botón adelantar 5 segundos"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_forward()
+
+    def _trigger_backward(self):
+        """Dispara el botón atrasar 5 segundos"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_backward()
+
+    def _trigger_next(self):
+        """Dispara el botón siguiente canción"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_next()
+
+    def _trigger_previous(self):
+        """Dispara el botón canción anterior"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_previous()
 
     def on_close(self):
         try:

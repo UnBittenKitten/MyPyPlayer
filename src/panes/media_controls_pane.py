@@ -262,21 +262,44 @@ class MediaControlsPane:
         
         self.total_time = self.audio_backend.get_song_length()
         
-        if self.total_time <= 0:
-            self.total_time = 0
-            self.total_time_label.configure(text="-0:00")
-        else:
+        # Actualizar etiqueta de tiempo total
+        if self.total_time > 0:
+            # Al inicio, mostrar el tiempo total como negativo
             mins = int(self.total_time // 60)
             secs = int(self.total_time % 60)
             self.total_time_label.configure(text=f"-{mins}:{secs:02d}")
+        else:
+            # Fallback a metadata si no hay duración del backend
+            try:
+                if ":" in metadata["duration"]:
+                    mins, secs = metadata["duration"].split(":")
+                    self.total_time = int(mins) * 60 + int(secs)
+                    # Mostrar como tiempo restante negativo
+                    self.total_time_label.configure(text=f"-{mins}:{secs}")
+                else:
+                    self.total_time = 0
+                    self.total_time_label.configure(text="-0:00")
+            except:
+                self.total_time = 0
+                self.total_time_label.configure(text="-0:00")
         
         self.current_time = 0
         self.current_time_label.configure(text="0:00")
         self.progress_slider.set(0)
         
-        # Album art
+        # Album art - solución simple y robusta
         if metadata["album_art"]:
-            self.album_art_label.configure(image=metadata["album_art"], text="")
+            try:
+                # Crear directamente una imagen de 100x100px
+                resized_image = ctk.CTkImage(
+                    light_image=metadata["album_art"]._light_image,
+                    dark_image=metadata["album_art"]._dark_image,
+                    size=(85, 85)
+                )
+                self.album_art_label.configure(image=resized_image, text="")
+            except Exception as e:
+                print(f"Error configurando album art: {e}")
+                self.album_art_label.configure(image=None, text="🎵")
         else:
             self.album_art_label.configure(image=None, text="🎵")
         
@@ -367,8 +390,6 @@ class MediaControlsPane:
 
     def destroy(self):
         self._stop_progress_update()
-        # if hasattr(super(), 'destroy'):
-        #     super().destroy()
 
 def add_to(parent_frame, audio_backend, queue_component=None, on_play=None, on_pause=None, 
            on_stop=None, on_volume_change=None, on_previous=None, on_next=None):
