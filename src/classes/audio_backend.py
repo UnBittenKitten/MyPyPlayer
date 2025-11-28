@@ -6,7 +6,6 @@ class AudioBackend:
         pygame.mixer.init()
         self.current_file = None
         self.is_paused = False
-        self.song_length = 0  # Duración total en segundos
 
     def load_music(self, file_path):
         """Loads a music file for playback."""
@@ -48,10 +47,10 @@ class AudioBackend:
 
     def get_pos(self):
         """Returns current playback position in seconds."""
-        return pygame.mixer.music.get_pos() / 1000.0  # Convertimos a segundos
+        return pygame.mixer.music.get_pos() / 1000.0 
 
-    def seek(self, position):
-        """Seeks to a specific position in the song (in seconds)."""
+    def set_pos(self, position): # MODIFICADO NOMBRE DE 'seek' A 'set_pos'
+        """set to a specific position in the song (in seconds)."""
         if self.current_file:
             self.stop_music()
             self.play_music(start_pos=position)

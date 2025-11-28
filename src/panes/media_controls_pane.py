@@ -1,6 +1,4 @@
 import customtkinter as ctk
-import pygame
-import os
 
 class MediaControlsPane:
     def __init__(self, parent_frame, audio_backend, queue_component=None, on_play=None, on_pause=None, 
@@ -18,7 +16,6 @@ class MediaControlsPane:
         self.is_playing = False
         self.current_time = 0
         self.total_time = 0
-        self.is_seeking = False  # Para evitar actualizaciones durante el seek
         
         self.PROGRESS_SLIDER_LENGTH = 400
         self.VOLUME_SLIDER_WIDTH = 80
@@ -40,13 +37,13 @@ class MediaControlsPane:
         main_frame.grid_rowconfigure(0, weight=1)     # Fila única
         
         # --- COLUMNA 0: Album Art ---
-        self.album_art_container = ctk.CTkFrame(main_frame, width=80, height=80, 
+        self.album_art_container = ctk.CTkFrame(main_frame, width=40, height=40, 
                                                fg_color="transparent", corner_radius=8)
         self.album_art_container.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
         self.album_art_container.grid_propagate(False)
         
         self.album_art_label = ctk.CTkLabel(self.album_art_container, text="🎵", 
-                                          image=None, width=80, height=80,
+                                          image=None, width=40, height=40,
                                           font=("Arial", 16), corner_radius=6)
         self.album_art_label.pack(fill="both", expand=True)
         
@@ -67,12 +64,12 @@ class MediaControlsPane:
         # Título en primera línea
         self.song_title_label = ctk.CTkLabel(info_frame, text="No song selected", 
                                            font=("Arial", 14, "bold"), anchor="w")
-        self.song_title_label.grid(row=1, column=0, sticky="w", pady=(0, 2))
+        self.song_title_label.grid(row=1, column=0, sticky="w", pady=(0, 1))
         
         # Artista en segunda línea
         self.artist_label = ctk.CTkLabel(info_frame, text="Unknown Artist", 
-                                       font=("Arial", 12), anchor="w", text_color="gray")
-        self.artist_label.grid(row=2, column=0, sticky="w", pady=(2, 0))
+                                       font=("Arial", 13.5), anchor="w", text_color="lightgray")
+        self.artist_label.grid(row=2, column=0, sticky="w", pady=(1, 0))
         
         # Espaciador inferior
         ctk.CTkLabel(info_frame, text="", height=1).grid(row=3, column=0)
@@ -95,22 +92,56 @@ class MediaControlsPane:
         controls_frame = ctk.CTkFrame(center_frame, fg_color="transparent")
         controls_frame.grid(row=1, column=0, sticky="n", pady=5)
         
-        self.previous_btn = ctk.CTkButton(controls_frame, text="⏮", width=40, height=40,
-                                        font=("Arial", 16), command=self._on_previous,
-                                        fg_color="transparent", hover_color="#2B2B2B")
+        # Botón atrasar
+        self.backward_btn = ctk.CTkLabel(controls_frame, text="↺", width=40, height=40,
+                                font=("Arial", 24),
+                                text_color="#CCCCCC",  # Gris claro normal
+                                cursor="hand2")  # Cursor de mano al pasar
+        self.backward_btn.pack(side="left", padx=5)
+        self.backward_btn.bind("<Button-1>", lambda e: self._on_next())
+        self.backward_btn.bind("<Enter>", lambda e: self.backward_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
+        self.backward_btn.bind("<Leave>", lambda e: self.backward_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+
+        # Botón anterior
+        self.previous_btn = ctk.CTkLabel(controls_frame, text="<<", width=40, height=40,
+                                    font=("Arial", 18), 
+                                    text_color="#CCCCCC",  # Gris claro normal
+                                    cursor="hand2")  # Cursor de mano al pasar
         self.previous_btn.pack(side="left", padx=5)
+        self.previous_btn.bind("<Button-1>", lambda e: self._on_previous())
+        self.previous_btn.bind("<Enter>", lambda e: self.previous_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
+        self.previous_btn.bind("<Leave>", lambda e: self.previous_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
         
+        # Botón play/pause
         self.play_pause_btn = ctk.CTkButton(controls_frame, text="▶", width=50, height=50,
-                                          font=("Arial", 18), command=self._on_play_pause,
-                                          fg_color="#1f6aa5", hover_color="#1a5a8a")
+                                          font=("Arial", 22), command=self._on_play_pause,
+                                          fg_color="#000000",  # Negro
+                                          hover_color="#333333",  # Negro más claro al hover
+                                          text_color="#FFFFFF",  # Texto blanco
+                                          corner_radius=25)  # Circular (50% del tamaño)
         self.play_pause_btn.pack(side="left", padx=10)
         
-        self.next_btn = ctk.CTkButton(controls_frame, text="⏭", width=40, height=40,
-                                    font=("Arial", 16), command=self._on_next,
-                                    fg_color="transparent", hover_color="#2B2B2B")
+        # Botón siguiente
+        self.next_btn = ctk.CTkLabel(controls_frame, text=">>", width=40, height=40,
+                                font=("Arial", 18),
+                                text_color="#CCCCCC",  # Gris claro normal
+                                cursor="hand2")  # Cursor de mano al pasar
         self.next_btn.pack(side="left", padx=5)
+        self.next_btn.bind("<Button-1>", lambda e: self._on_next())
+        self.next_btn.bind("<Enter>", lambda e: self.next_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
+        self.next_btn.bind("<Leave>", lambda e: self.next_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
+
+        # Botón adelantar
+        self.forward_btn = ctk.CTkLabel(controls_frame, text="↻", width=40, height=40,
+                                font=("Arial", 24),
+                                text_color="#CCCCCC",  # Gris claro normal
+                                cursor="hand2")  # Cursor de mano al pasar
+        self.forward_btn.pack(side="left", padx=5)
+        self.forward_btn.bind("<Button-1>", lambda e: self._on_next())
+        self.forward_btn.bind("<Enter>", lambda e: self.forward_btn.configure(text_color="#FFFFFF"))  # Blanco en hover
+        self.forward_btn.bind("<Leave>", lambda e: self.forward_btn.configure(text_color="#CCCCCC"))  # Vuelve a gris
         
-        # Fila 2: Progress Bar
+        # Fila 2: Progress Bar (SOLO VISUAL - sin funcionalidad de seek)
         progress_frame = ctk.CTkFrame(center_frame, fg_color="transparent")
         progress_frame.grid(row=2, column=0, sticky="ew", pady=5)
         
@@ -122,14 +153,13 @@ class MediaControlsPane:
                                              font=("Arial", 11), width=40)
         self.current_time_label.pack(side="left")
         
+        # Progress bar
         self.progress_slider = ctk.CTkSlider(time_frame, from_=0, to=100, 
                                            width=self.PROGRESS_SLIDER_LENGTH, height=12, 
                                            progress_color="#1f6aa5",
-                                           command=self._on_progress_drag)
+                                           state="disabled")  # Deshabilitado
         self.progress_slider.set(0)
         self.progress_slider.pack(side="left", fill="x", expand=True, padx=10)
-        self.progress_slider.bind("<Button-1>", self._on_progress_click_start)
-        self.progress_slider.bind("<ButtonRelease-1>", self._on_progress_click_end)
         
         self.total_time_label = ctk.CTkLabel(time_frame, text="0:00", 
                                            font=("Arial", 11), width=40)
@@ -164,9 +194,6 @@ class MediaControlsPane:
                                          command=self._on_volume_change)
         self.volume_slider.set(0.5)
         self.volume_slider.pack(side="left")
-        
-        # Espaciador inferior
-        ctk.CTkLabel(volume_frame, text="", height=1).grid(row=2, column=0)
 
     def update_song_info(self, metadata):
         """Actualiza la metadata de la canción actual"""
@@ -175,7 +202,7 @@ class MediaControlsPane:
         self.song_title_label.configure(text=metadata["title"])
         self.artist_label.configure(text=metadata["artist"])
         
-        # Usar la duración del audio backend en lugar de la metadata
+        # Usar la duración del audio backend
         self.total_time = self.audio_backend.get_song_length()
         
         # Actualizar etiqueta de tiempo total
@@ -224,7 +251,7 @@ class MediaControlsPane:
 
     def _update_progress(self):
         """Actualiza el progreso de reproducción cada 100ms"""
-        if self.is_playing and not self.is_seeking:
+        if self.is_playing and self.total_time > 0:
             # Obtener posición actual desde el audio backend
             current_pos = self.audio_backend.get_pos()
             
@@ -240,8 +267,8 @@ class MediaControlsPane:
             secs = int(self.current_time % 60)
             self.current_time_label.configure(text=f"{mins}:{secs:02d}")
             
-            # Actualizar slider (solo si no está siendo arrastrado)
-            if self.total_time > 0 and not self.is_seeking:
+            # Actualizar slider (solo visual)
+            if self.total_time > 0:
                 progress = (self.current_time / self.total_time) * 100
                 self.progress_slider.set(progress)
             
@@ -255,58 +282,6 @@ class MediaControlsPane:
         self.is_playing = False
         self.play_pause_btn.configure(text="▶")
         self._stop_progress_timer()
-        # Aquí podrías llamar a on_next para reproducir la siguiente canción
-
-    def _on_progress_click_start(self, event):
-        """Inicia el proceso de seek"""
-        self.is_seeking = True
-        # Detener temporalmente el timer durante el seek
-        self._stop_progress_timer()
-        # NO cambiar el estado de reproducción durante el seek
-        # Solo guardar el estado actual para restaurarlo después
-        self.was_playing_before_seek = self.is_playing
-
-    def _on_progress_drag(self, value):
-        """Maneja el arrastre de la barra de progreso"""
-        if self.is_seeking and self.total_time > 0:
-            # Actualizar tiempo actual durante el arrastre
-            new_time = (float(value) / 100.0) * self.total_time
-            mins = int(new_time // 60)
-            secs = int(new_time % 60)
-            self.current_time_label.configure(text=f"{mins}:{secs:02d}")
-
-    def _on_progress_click_end(self, event):
-        """Maneja el final del clic en la barra de progreso (seek)"""
-        if self.is_seeking and self.total_time > 0:
-            # Calcular nueva posición basada en el valor del slider
-            new_pos = (self.progress_slider.get() / 100.0) * self.total_time
-            
-            # Realizar el seek en el audio backend
-            self.audio_backend.seek(new_pos)
-            
-            # Actualizar tiempo actual
-            self.current_time = new_pos
-            mins = int(new_pos // 60)
-            secs = int(new_pos % 60)
-            self.current_time_label.configure(text=f"{mins}:{secs:02d}")
-            
-            # RESTAURAR el estado de reproducción original
-            # Si estaba reproduciéndose antes del seek, continuar reproduciendo
-            if self.was_playing_before_seek:
-                # Asegurarse de que el estado interno y el botón estén sincronizados
-                self.is_playing = True
-                self.play_pause_btn.configure(text="⏸")
-                self.audio_backend.unpause_music()
-            else:
-                # Si estaba pausado, mantener pausado
-                self.is_playing = False
-                self.play_pause_btn.configure(text="▶")
-            
-        self.is_seeking = False
-        
-        # REANUDAR EL TIMER después del seek si la canción está reproduciéndose
-        if self.is_playing:
-            self._start_progress_timer()
 
     def _on_play_pause(self):
         """Maneja el botón play/pause"""
@@ -320,7 +295,7 @@ class MediaControlsPane:
         else:
             # Reproducir
             self.is_playing = True
-            self.play_pause_btn.configure(text="⏸")
+            self.play_pause_btn.configure(text="II")
             self._start_progress_timer()
             if self.on_play:
                 self.on_play()
@@ -328,7 +303,7 @@ class MediaControlsPane:
     def _on_previous(self):
         """Maneja el botón anterior"""
         if self.current_time > 5:  # Si lleva más de 5 segundos, reiniciar canción
-            self.audio_backend.seek(0)
+            self.audio_backend.set_pos(0)
             self.current_time = 0
             self.current_time_label.configure(text="0:00")
             self.progress_slider.set(0)
@@ -357,7 +332,7 @@ class MediaControlsPane:
         """Actualiza el estado de reproducción desde fuera"""
         self.is_playing = playing
         if playing:
-            self.play_pause_btn.configure(text="⏸")
+            self.play_pause_btn.configure(text="II")
             self._start_progress_timer()
         else:
             self.play_pause_btn.configure(text="▶")
