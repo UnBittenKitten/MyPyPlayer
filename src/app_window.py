@@ -1,5 +1,4 @@
 import warnings
-# Filter out the specific warning about pkg_resources
 warnings.filterwarnings("ignore", category=UserWarning, module="pygame")
 import customtkinter as ctk
 import tkinter as tk
@@ -7,7 +6,6 @@ import utils.resource_path as rp
 import classes.audio_backend as ab
 import classes.data_manager as dm
 
-# Import the panes
 import panes.sources_pane as sources_pane
 import panes.explorer_pane as explorer_pane
 import panes.playlists_pane as playlists_pane
@@ -19,322 +17,165 @@ my_app_id = "MyPyPlayer.v0.0.1"
 try:
     from ctypes import windll
     windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
-except ImportError:
-    pass
+except ImportError: pass
 
 class AppWindow(ctk.CTk):
-    """
-    Main application window class, inheriting from customtkinter.CTk.
-    """
     def __init__(self, *args, **kwargs):
-        # Call the parent class constructor
         super().__init__(*args, **kwargs)
-
-        # --- Data Manager (Init First) ---
         self.data_manager = dm.DataManager() 
-
-        # --- Configure Window ---
         self.title("MyPyPlayer - Music Player")
         
-        # --- Restore Geometry & State ---
         saved_geometry = self.data_manager.get_setting("window_geometry")
-        saved_state = self.data_manager.get_setting("window_state")
-
         if saved_geometry:
-            try:
-                self.geometry(saved_geometry)
-            except Exception:
-                self.geometry("800x600")
-        else:
-            self.geometry("800x600")
+            try: self.geometry(saved_geometry)
+            except: self.geometry("800x600")
+        else: self.geometry("800x600")
 
-        if saved_state == "zoomed":
+        if self.data_manager.get_setting("window_state") == "zoomed":
             self.after(10, lambda: self.state("zoomed"))
 
-        # --- Audio Backend ---
         self.audio_backend = ab.AudioBackend() 
         self.audio_backend.set_volume(0.5)
         self.current_song_path = None
         self.current_metadata = None
         
-        # --- Set the icon ---
         try:
             icon_path = rp.resource_path("assets/icon/icon.ico")
             self.iconbitmap(icon_path)
-        except Exception:
-            pass
+        except: pass
         
-        # Style configuration for the draggable dividers (sashes)
-        pane_config = {
-            "bd": 0,
-            "sashwidth": 4,
-            "bg": "#242424", 
-            "sashrelief": "flat"
-        }
+        pane_config = {"bd": 0, "sashwidth": 4, "bg": "#242424", "sashrelief": "flat"}
 
-        # 1. MAIN HORIZONTAL SPLIT (Left vs Right)
         self.main_pane = tk.PanedWindow(self, orient="horizontal", **pane_config)
         self.main_pane.pack(fill="both", expand=True)
 
-        # --- LEFT SIDE (Vertical Split) ---
         self.left_pane = tk.PanedWindow(self.main_pane, orient="vertical", **pane_config)
         self.main_pane.add(self.left_pane) 
 
-        # Section 1: Left Top - PLAYLISTS
         self.sec1 = ctk.CTkFrame(self.left_pane, fg_color="#2B2B2B", corner_radius=0)
         self.left_pane.add(self.sec1, stretch="always")
-
         try:
-            self.playlists_component = playlists_pane.add_to(
-                self.sec1,
-                self.data_manager,
-                on_playlist_click=lambda name: self.on_playlist_selected(name)
-            )
-        except Exception as e:
-            print(f"Playlists pane load error: {e}")
+            self.playlists_component = playlists_pane.add_to(self.sec1, self.data_manager, on_playlist_click=lambda n: self.on_playlist_selected(n))
+        except: pass
 
-        # Section 2: Left Bottom - SOURCES PANE
         self.sec2 = ctk.CTkFrame(self.left_pane, fg_color="#3A3A3A", corner_radius=0)
         self.left_pane.add(self.sec2, stretch="always")
-        
         try:
-            self.sources_component = sources_pane.add_to(
-                self.sec2,
-                self.data_manager,
-                on_folder_click=lambda path: self.on_folder_selected(path)
-            )
-        except Exception as e:
-            print(f"Sources pane load error: {e}")
+            self.sources_component = sources_pane.add_to(self.sec2, self.data_manager, on_folder_click=lambda p: self.on_folder_selected(p))
+        except: pass
 
-        # --- RIGHT SIDE (Vertical Split) ---
         self.right_pane = tk.PanedWindow(self.main_pane, orient="vertical", **pane_config)
         self.main_pane.add(self.right_pane) 
 
-        # -- Right Top Area (Horizontal Split) --
         self.right_top_pane = tk.PanedWindow(self.right_pane, orient="horizontal", **pane_config)
         self.right_pane.add(self.right_top_pane, stretch="always")
 
-        # Section 3: Right Top Left - EXPLORER PANE
         self.sec3 = ctk.CTkFrame(self.right_top_pane, fg_color="#494949", corner_radius=0)
         self.right_top_pane.add(self.sec3, stretch="always")
-        
         try:
-            self.explorer_component = explorer_pane.add_to(
-                self.sec3,
-                self.data_manager,
-                on_song_click=lambda song_path: self.on_song_selected(song_path)
-            )
-        except Exception as e:
-            print(f"Explorer pane load error: {e}")
+            self.explorer_component = explorer_pane.add_to(self.sec3, self.data_manager, on_song_click=lambda p: self.on_song_selected(p))
+        except: pass
 
-        # Section 4: Right Top Right - SONG QUEUE
         self.sec4 = ctk.CTkFrame(self.right_top_pane, fg_color="#585858", corner_radius=0)
         self.right_top_pane.add(self.sec4, stretch="always")
-
         try:
-            self.queue_component = song_queue_pane.add_to(
-                self.sec4,
-                self.data_manager,
-                self.audio_backend
-            )
-        except Exception as e:
-            print(f"Song queue pane load error: {e}")
+            self.queue_component = song_queue_pane.add_to(self.sec4, self.data_manager, self.audio_backend, on_play_start=lambda p: self.on_song_selected(p))
+        except: pass
         
-        # Section 5: Right Bottom - MEDIA CONTROLS & METADATA
         self.sec5 = ctk.CTkFrame(self.right_pane, fg_color="#676767", corner_radius=0)
         self.right_pane.add(self.sec5, stretch="always")
         
         try:
-            self.media_controls = media_controls_pane.add_to(
+            # Pass EMPTY callbacks for play/pause to prevent double-trigger
+            self.media_controls = media_controls_pane.MediaControlsPane(
                 self.sec5,
                 self.audio_backend,
-                on_play=self.on_play_clicked,
-                on_pause=self.on_pause_clicked,
+                queue_component=getattr(self, 'queue_component', None),
+                on_play=None, 
+                on_pause=None,
                 on_stop=self.on_stop_clicked,
                 on_volume_change=self.on_volume_changed,
                 on_previous=self.on_previous_clicked,
                 on_next=self.on_next_clicked
             )
-        except Exception as e:
-            print(f"Media controls load error: {e}")
+        except: pass
 
-        # --- Layout Restoration Logic ---
+        self.check_for_song_end()
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        self.bind_keys()
+    def check_for_song_end(self):
+        if self.current_song_path and self.audio_backend.has_song_ended():
+            if hasattr(self, 'queue_component'):
+                next_song = self.queue_component.pop_next_song()
+                if next_song: self.on_song_selected(next_song)
+        self.after(1000, self.check_for_song_end)
 
     def on_previous_clicked(self):
-        """Maneja el botón anterior"""
-        print("Previous song clicked")
+        prev = self.audio_backend.play_previous()
+        if prev:
+            self.current_song_path = prev
+            self.current_metadata = self.data_manager.get_song_metadata(prev)
+            if hasattr(self, 'media_controls'):
+                self.media_controls.update_song_info(self.current_metadata)
+                self.media_controls.set_playing_state(True)
 
     def on_next_clicked(self):
-        """Maneja el botón siguiente"""
-        print("Next song clicked")
+        if hasattr(self, 'queue_component'):
+            next_song = self.queue_component.pop_next_song()
+            if next_song: self.on_song_selected(next_song)
 
     def on_folder_selected(self, folder_path):
-        """Cuando se hace clic en una carpeta en Sources Pane"""
-        print(f"Folder selected: {folder_path}")
-        if hasattr(self, 'explorer_component'):
-            self.explorer_component.load_folder(folder_path)
+        if hasattr(self, 'explorer_component'): self.explorer_component.load_folder(folder_path)
 
     def on_playlist_selected(self, playlist_name):
-        """Cuando se hace clic en una playlist en Playlists Pane"""
-        print(f"Playlist selected: {playlist_name}")
-        self.explorer_component.load_playlist(playlist_name)
-        # if hasattr(self, 'explorer_component'):
+        if hasattr(self, 'explorer_component'): self.explorer_component.load_playlist(playlist_name)
 
     def on_song_selected(self, song_path):
-        """Cuando se hace clic en una canción en Explorer Pane"""
-        print(f"Song selected: {song_path}")
         self.current_song_path = song_path
-        
         try:
             self.audio_backend.load_music(song_path)
             self.audio_backend.play_music()
-            
             self.current_metadata = self.data_manager.get_song_metadata(song_path)
             if hasattr(self, 'media_controls'):
                 self.media_controls.update_song_info(self.current_metadata)
                 self.media_controls.set_playing_state(True)
-            
-        except Exception as e:
-            print(f"Error loading song: {e}")
+        except: pass
 
-    def on_play_clicked(self):
-        """Callback para botón Play"""
-        if self.current_song_path:
-            self.audio_backend.unpause_music()
-
-    def on_pause_clicked(self):
-        """Callback para botón Pause"""
-        self.audio_backend.pause_music()
-
-    def on_stop_clicked(self):
-        """Callback para botón Stop"""
-        self.audio_backend.stop_music()
-
-    def on_volume_changed(self, volume):
-        """Callback para cambio de volumen"""
-        self.audio_backend.set_volume(volume)
-
-    def create_label(self, parent, text):
-        """Helper to add a centered label"""
-        label = ctk.CTkLabel(parent, text=text, font=("Arial", 20, "bold"))
-        label.place(relx=0.5, rely=0.5, anchor="center")
+    def on_play_clicked(self): pass
+    def on_pause_clicked(self): pass
+    def on_stop_clicked(self): self.audio_backend.stop_music()
+    def on_volume_changed(self, volume): self.audio_backend.set_volume(volume)
 
     def load_layout(self):
-        """Fetches ratios from DB and applies them."""
+        self.update_idletasks()
         try:
-            self.update_idletasks()
-
             def apply_ratio(pane, db_key, is_vertical=False):
                 ratio = self.data_manager.get_setting(db_key)
-                if ratio is not None:
-                    try:
-                        ratio = float(ratio)
-                        if is_vertical:
-                            total_size = pane.winfo_height()
-                            new_pos = int(total_size * ratio)
-                            if new_pos > 0:
-                                pane.sash_place(0, 0, new_pos)
-                        else:
-                            total_size = pane.winfo_width()
-                            new_pos = int(total_size * ratio)
-                            if new_pos > 0:
-                                pane.sash_place(0, new_pos, 0)
-                    except Exception as e:
-                        print(f"Error applying ratio for {db_key}: {e}")
-
-            apply_ratio(self.main_pane, "ratio_main", is_vertical=False)
-            apply_ratio(self.left_pane, "ratio_left", is_vertical=True)
-            apply_ratio(self.right_pane, "ratio_right", is_vertical=True)
-            apply_ratio(self.right_top_pane, "ratio_right_top", is_vertical=False)
-
-        except Exception as e:
-            print(f"Error loading layout: {e}")
-
-    def bind_keys(self):
-        """Configura los atajos de teclado"""
-        # Espacio = Play/Pause
-        self.bind('<space>', lambda e: self._trigger_play_pause())
-        
-        # Flecha derecha = Adelantar 5 segundos
-        self.bind('<Right>', lambda e: self._trigger_forward())
-        
-        # Flecha izquierda = Atrasar 5 segundos  
-        self.bind('<Left>', lambda e: self._trigger_backward())
-        
-        # Ctrl + Flecha derecha = Siguiente canción
-        self.bind('<Control-Right>', lambda e: self._trigger_next())
-        
-        # Ctrl + Flecha izquierda = Canción anterior
-        self.bind('<Control-Left>', lambda e: self._trigger_previous())
-        
-        # Prevenir que las flechas afecten el foco
-        self.bind('<KeyPress>', self._prevent_arrow_focus)
-
-    def _prevent_arrow_focus(self, event):
-        """Previene que las flechas cambien el foco entre widgets"""
-        if event.keysym in ('Left', 'Right') and not event.state & 0x4:  # 0x4 es Ctrl
-            return "break"
-
-    def _trigger_play_pause(self):
-        """Dispara el botón play/pause"""
-        if hasattr(self, 'media_controls'):
-            self.media_controls.play_pause_btn.invoke()
-
-    def _trigger_forward(self):
-        """Dispara el botón adelantar 5 segundos"""
-        if hasattr(self, 'media_controls'):
-            self.media_controls.on_forward()
-
-    def _trigger_backward(self):
-        """Dispara el botón atrasar 5 segundos"""
-        if hasattr(self, 'media_controls'):
-            self.media_controls.on_backward()
-
-    def _trigger_next(self):
-        """Dispara el botón siguiente canción"""
-        if hasattr(self, 'media_controls'):
-            self.media_controls.on_next()
-
-    def _trigger_previous(self):
-        """Dispara el botón canción anterior"""
-        if hasattr(self, 'media_controls'):
-            self.media_controls.on_previous()
+                if ratio:
+                    val = int((pane.winfo_height() if is_vertical else pane.winfo_width()) * float(ratio))
+                    if val > 0: pane.sash_place(0, 0, val) if is_vertical else pane.sash_place(0, val, 0)
+            
+            apply_ratio(self.main_pane, "ratio_main", False)
+            apply_ratio(self.left_pane, "ratio_left", True)
+            apply_ratio(self.right_pane, "ratio_right", True)
+            apply_ratio(self.right_top_pane, "ratio_right_top", False)
+        except: pass
 
     def on_close(self):
-        """Saves ratios (0.0 - 1.0) to DB and closes."""
         try:
             def get_ratio(pane, is_vertical=False):
-                try:
-                    coords = pane.sash_coord(0)
-                    if is_vertical:
-                        total = pane.winfo_height()
-                        pos = coords[1]
-                    else:
-                        total = pane.winfo_width()
-                        pos = coords[0]
-                    
-                    if total > 0:
-                        return pos / total
-                    return 0.5
-                except Exception:
-                    return 0.5
+                coords = pane.sash_coord(0)
+                if is_vertical: return coords[1] / pane.winfo_height()
+                else: return coords[0] / pane.winfo_width()
 
             self.data_manager.save_setting("ratio_main", get_ratio(self.main_pane, False))
             self.data_manager.save_setting("ratio_left", get_ratio(self.left_pane, True))
             self.data_manager.save_setting("ratio_right", get_ratio(self.right_pane, True))
             self.data_manager.save_setting("ratio_right_top", get_ratio(self.right_top_pane, False))
             
-            current_state = self.state()
-            self.data_manager.save_setting("window_state", current_state)
-
-            if current_state != "zoomed":
+            self.data_manager.save_setting("window_state", self.state())
+            if self.state() != "zoomed":
                 self.data_manager.save_setting("window_geometry", self.geometry())
-            
-        except Exception as e:
-            print(f"Error saving layout: {e}")
-
+        except: pass
         self.destroy()
