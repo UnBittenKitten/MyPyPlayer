@@ -18,13 +18,12 @@ class MediaControlsPane:
         self.is_finished = False
         self.current_time = 0
         self.total_time = 0
-        
+        self.is_seeking = False
         self.PROGRESS_SLIDER_LENGTH = 400
-        self.VOLUME_SLIDER_WIDTH = 80
+        self.VOLUME_SLIDER_WIDTH = 140
         
         # ID del after para el progreso
         self.progress_after_id = None
-        
         self._build_ui()
         
     def _build_ui(self):
@@ -39,15 +38,15 @@ class MediaControlsPane:
         main_frame.grid_rowconfigure(0, weight=1)     # Fila única
         
         # --- COLUMNA 0: Album Art ---
-        self.album_art_container = ctk.CTkFrame(main_frame, width=40, height=40, 
-                                               fg_color="transparent", corner_radius=8)
+        self.album_art_container = ctk.CTkFrame(main_frame, width=100, height=100, 
+                                            fg_color="transparent", corner_radius=8)
         self.album_art_container.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
         self.album_art_container.grid_propagate(False)
-        
+
         self.album_art_label = ctk.CTkLabel(self.album_art_container, text="🎵", 
-                                          image=None, width=40, height=40,
-                                          font=("Arial", 16), corner_radius=6)
-        self.album_art_label.pack(fill="both", expand=True)
+                                        image=None, width=100, height=100,
+                                        font=("Arial", 24), corner_radius=6)
+        self.album_art_label.place(relx=0.5, rely=0.5, anchor="center")
         
         # --- COLUMNA 1: Título y Artista ---
         info_frame = ctk.CTkFrame(main_frame, fg_color="transparent", width=120)
@@ -120,7 +119,7 @@ class MediaControlsPane:
                                           fg_color="#000000",
                                           hover_color="#333333",
                                           text_color="#FFFFFF",
-                                          corner_radius=25)
+                                          corner_radius=50)
         self.play_pause_btn.pack(side="left", padx=10)
         
         # Botón siguiente
@@ -155,13 +154,17 @@ class MediaControlsPane:
                                              font=("Arial", 11), width=40)
         self.current_time_label.pack(side="left")
         
-        # Progress bar
+        # Progress bar - CON EVENTOS DE ARRASTRE MEJORADOS
         self.progress_slider = ctk.CTkSlider(time_frame, from_=0, to=100, 
                                            width=self.PROGRESS_SLIDER_LENGTH, height=12, 
-                                           progress_color="#1f6aa5",
-                                           command=self._on_progress_seek)
+                                           progress_color="#1f6aa5")
         self.progress_slider.set(0)
         self.progress_slider.pack(side="left", fill="x", expand=True, padx=10)
+        
+        # Bind events para el progress slider
+        self.progress_slider.bind("<ButtonPress-1>", self._on_progress_drag_start)
+        self.progress_slider.bind("<ButtonRelease-1>", self._on_progress_drag_end)
+        self.progress_slider.bind("<B1-Motion>", self._on_progress_dragging)
         
         self.total_time_label = ctk.CTkLabel(time_frame, text="0:00", 
                                            font=("Arial", 11), width=40)
@@ -197,13 +200,45 @@ class MediaControlsPane:
         self.volume_slider.set(0.5)
         self.volume_slider.pack(side="left")
 
-    def _on_progress_seek(self, value):
-        """Maneja cuando el usuario mueve la barra de progreso"""
-        if self.total_time > 0 and self.is_finished == False:
-            new_position = (value / 100.0) * self.total_time
+    def _on_progress_drag_start(self, event):
+        """Cuando el usuario comienza a arrastrar el progress slider"""
+        self.is_seeking = True
+        self._stop_progress_update()
+
+    def _on_progress_dragging(self, event):
+        """Cuando el usuario está arrastrando el progress slider"""
+        if self.is_seeking and self.total_time > 0:
+            # Calcular la posición basada en la posición del mouse
+            slider = self.progress_slider
+            x = event.x
+            width = slider.winfo_width()
+            
+            # Calcular el valor basado en la posición del mouse
+            if width > 0:
+                relative_x = max(0, min(x / width, 1.0))
+                progress_value = relative_x * 100
+                slider.set(progress_value)
+                
+                # Actualizar el tiempo actual durante el arrastre
+                new_position = (progress_value / 100.0) * self.total_time
+                self.current_time = new_position
+                self._update_time_display()
+
+    def _on_progress_drag_end(self, event):
+        """Cuando el usuario suelta el progress slider"""
+        if self.is_seeking and self.total_time > 0:
+            self.is_seeking = False
+            progress_value = self.progress_slider.get()
+            new_position = (progress_value / 100.0) * self.total_time
+            
+            # Establecer la nueva posición en el audio backend
             self.audio_backend.set_pos(new_position)
             self.current_time = new_position
             self._update_time_display()
+            
+            # Reanudar la actualización del progreso si está reproduciendo
+            if self.is_playing:
+                self._start_progress_update()
 
     def on_backward(self, event=None):
         """Atrasa la canción 5 segundos"""
@@ -230,8 +265,8 @@ class MediaControlsPane:
         secs = int(self.current_time % 60)
         self.current_time_label.configure(text=f"{mins}:{secs:02d}")
         
-        # Actualizar progress bar
-        if self.total_time > 0:
+        # Actualizar progress bar solo si no está siendo arrastrado
+        if self.total_time > 0 and not self.is_seeking:
             progress = (self.current_time / self.total_time) * 100
             self.progress_slider.set(progress)
             
@@ -241,7 +276,6 @@ class MediaControlsPane:
             
             # Mostrar en formato negativo: -MM:SS
             self.total_time_label.configure(text=f"-{remaining_mins}:{remaining_secs:02d}")
-
 
     def update_song_info(self, metadata):
         """Actualiza la metadata de la canción actual"""
@@ -279,7 +313,28 @@ class MediaControlsPane:
         
         # Album art
         if metadata["album_art"]:
-            self.album_art_label.configure(image=metadata["album_art"], text="")
+            try:
+                from PIL import Image
+                import io
+                
+                pil_image = metadata["album_art"]._light_image
+                
+                # Redimensionar manteniendo relación de aspecto
+                pil_image.thumbnail((80, 80), Image.Resampling.LANCZOS)
+                
+                # Crear nueva imagen CTk con el tamaño redimensionado
+                resized_image = ctk.CTkImage(
+                    light_image=pil_image,
+                    dark_image=pil_image,
+                    size=pil_image.size
+                )
+                self.album_art_label.configure(image=resized_image, text="")
+            except Exception as e:
+                print(f"Error procesando album art: {e}")
+                try:
+                    self.album_art_label.configure(image=metadata["album_art"], text="")
+                except:
+                    self.album_art_label.configure(image=None, text="🎵")
         else:
             self.album_art_label.configure(image=None, text="🎵")
         
@@ -288,7 +343,7 @@ class MediaControlsPane:
     def _start_progress_update(self):
         """Inicia la actualización continua del progreso usando after()"""
         self._stop_progress_update()
-        if self.is_playing and self.total_time > 0:
+        if self.is_playing and self.total_time > 0 and not self.is_seeking:
             self._update_progress()
 
     def _stop_progress_update(self):
@@ -299,7 +354,7 @@ class MediaControlsPane:
 
     def _update_progress(self):
         """Actualiza el progreso usando after() para llevar a cabo las iteraciones"""
-        if self.is_playing and self.total_time > 0:
+        if self.is_playing and self.total_time > 0 and not self.is_seeking:
             # Obtener posición actual del backend
             self.current_time = self.audio_backend.get_pos()
             
@@ -380,7 +435,7 @@ class MediaControlsPane:
         self.current_time = 0
         self.current_time_label.configure(text="0:00")
         self.progress_slider.set(0)
-        self._start_progress_timer()
+        self._start_progress_update()
 
     def destroy(self):
         """Limpia los after al destruir"""
