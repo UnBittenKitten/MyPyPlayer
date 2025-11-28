@@ -172,32 +172,26 @@ class AppWindow(ctk.CTk):
         self.bind('<KeyPress>', self._prevent_arrow_focus)
 
     def _prevent_arrow_focus(self, event):
-        """Previene que las flechas cambien el foco entre widgets"""
-        if event.keysym in ('Left', 'Right') and not event.state & 0x4:  # 0x4 es Ctrl
+        if event.keysym in ('Left', 'Right') and not event.state & 0x4:
             return "break"
 
     def _trigger_play_pause(self):
-        """Dispara el botón play/pause"""
         if hasattr(self, 'media_controls'):
             self.media_controls.on_play_pause()
 
     def _trigger_forward(self):
-        """Dispara el botón adelantar 5 segundos"""
         if hasattr(self, 'media_controls'):
             self.media_controls.on_forward()
 
     def _trigger_backward(self):
-        """Dispara el botón atrasar 5 segundos"""
         if hasattr(self, 'media_controls'):
             self.media_controls.on_backward()
 
     def _trigger_next(self):
-        """Dispara el botón siguiente canción"""
         if hasattr(self, 'media_controls'):
             self.media_controls.on_next()
 
     def _trigger_previous(self):
-        """Dispara el botón canción anterior"""
         if hasattr(self, 'media_controls'):
             self.media_controls.on_previous()
 
