@@ -2,60 +2,67 @@ import pygame
 
 class AudioBackend:
     def __init__(self):
-        # Initialize pygame mixer
-        pygame.mixer.init()
-        self.current_file = None
-        self.is_paused = False
-        self.song_length = 0  # Duración total en segundos
+        # Pre-initialize mixer with standard settings to avoid lag/silence
+        # Frequency: 44100Hz, Size: -16 bit, Channels: 2 (Stereo), Buffer: 2048
+        try:
+            pygame.mixer.pre_init(44100, -16, 2, 2048)
+            pygame.mixer.init()
+            print("AudioBackend initialized successfully.")
+        except pygame.error as e:
+            print(f"Failed to initialize audio mixer: {e}")
+
+        self.paused = False
 
     def load_music(self, file_path):
-        """Loads a music file for playback."""
-        self.current_file = file_path
         try:
             pygame.mixer.music.load(file_path)
-            sound = pygame.mixer.Sound(file_path)
-            self.song_length = sound.get_length()
+            print(f"Loaded: {file_path}")
         except pygame.error as e:
-            print(f"Error loading file: {e}")
-            self.song_length = 0
+            print(f"Error loading music file: {e}")
+            raise e # Re-raise to let the app know
 
-    def play_music(self, start_pos=0):
-        """Plays the currently loaded song from a specific position."""
-        if self.current_file:
-            try:
-                pygame.mixer.music.play(start=start_pos)
-                self.is_paused = False
-            except Exception as e:
-                print(f"Error playing: {e}")
+    def play_music(self):
+        try:
+            pygame.mixer.music.play()
+            self.paused = False
+            print("Playback started.")
+        except pygame.error as e:
+            print(f"Error starting playback: {e}")
 
     def pause_music(self):
-        """Pauses playback."""
-        pygame.mixer.music.pause()
-        self.is_paused = True
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.pause()
+            self.paused = True
 
     def unpause_music(self):
-        """Unpauses playback."""
-        pygame.mixer.music.unpause()
-        self.is_paused = False
+        if self.paused:
+            pygame.mixer.music.unpause()
+            self.paused = False
 
     def stop_music(self):
-        """Stops playback completely."""
         pygame.mixer.music.stop()
+        self.paused = False
 
     def set_volume(self, volume):
-        """Sets volume from 0.0 to 1.0"""
-        pygame.mixer.music.set_volume(volume)
+        # Ensure volume is float 0.0 to 1.0
+        try:
+            pygame.mixer.music.set_volume(float(volume))
+        except Exception:
+            pass
 
-    def get_pos(self):
-        """Returns current playback position in seconds."""
-        return pygame.mixer.music.get_pos() / 1000.0  # Convertimos a segundos
+    def is_playing(self):
+        return pygame.mixer.music.get_busy()
 
-    def seek(self, position):
-        """Seeks to a specific position in the song (in seconds)."""
-        if self.current_file:
-            self.stop_music()
-            self.play_music(start_pos=position)
-
-    def get_song_length(self):
-        """Returns the total length of the current song in seconds."""
-        return self.song_length
+    def is_idle(self):
+        """
+        Returns True ONLY if the player is stopped/empty.
+        Returns False if playing OR paused.
+        """
+        return not pygame.mixer.music.get_busy() and not self.paused
+    
+    def process_events(self):
+        """
+        Call this periodically to keep pygame internals happy.
+        Not strictly necessary for music only, but good practice.
+        """
+        pygame.event.pump()

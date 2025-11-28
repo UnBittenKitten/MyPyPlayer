@@ -1,140 +1,116 @@
 import random
-#--------------------------------------------------------------------------------
-# Clase lista nodo
-#--------------------------------------------------------------------------------
-'Guarda un valor y una referencia (puntero) a otro nodo'
 
 class ListNode:
     def __init__(self, value=None):
         self.value = value
         self.next = None
 
-#--------------------------------------------------------------------------------
-# Clase cola
-#--------------------------------------------------------------------------------
-'Çontrola el flujo de trabajo, en este caso para controlar las pistas'
-
 class Queue:
     def __init__(self):
-        self.front = None   # primer nodo
-        self.rear = None    # último nodo
+        self.front = None   # First node
+        self.rear = None    # Last node
+        self._size = 0      # Track size for O(1) length access
 
     def is_empty(self):
         return self.front is None
 
-    def add(self, value):  # enqueue
+    def add(self, value):
         new_node = ListNode(value)
-
         if self.is_empty():
             self.front = new_node
             self.rear = new_node
         else:
-            self.rear.next = new_node  # enlazar
-            self.rear = new_node       # actualizar cola
+            self.rear.next = new_node
+            self.rear = new_node
+        self._size += 1
 
-    def remove(self):  # dequeue
+    def remove(self):  # Dequeue (remove first)
         if self.is_empty():
-            raise Exception("Queue is empty")
-
+            return None
+        
         value = self.front.value
         self.front = self.front.next
-
-        if self.front is None:  # si sacaste el último
+        self._size -= 1
+        
+        if self.front is None:
             self.rear = None
-
+            
         return value
 
-    def peek(self):
-        if self.is_empty():
-            raise Exception("Queue is empty")
-        return self.front.value
+    def remove_at_index(self, index):
+        """Removes a node at a specific index."""
+        if index < 0 or index >= self._size or self.is_empty():
+            return
 
-    def skip(self):
-        return self.remove()
+        if index == 0:
+            self.remove()
+            return
+
+        current = self.front
+        # Stop at the node BEFORE the one we want to remove
+        for _ in range(index - 1):
+            current = current.next
+        
+        # current is now the node before the target
+        node_to_remove = current.next
+        current.next = node_to_remove.next
+        
+        # If we removed the last node, update rear
+        if current.next is None:
+            self.rear = current
+            
+        self._size -= 1
+
+    def move_node(self, from_index, to_index):
+        """Moves a node from index K to index L."""
+        if from_index == to_index or from_index < 0 or to_index < 0:
+            return
+        if from_index >= self._size or to_index >= self._size:
+            return
+
+        # 1. Extract the node
+        target_node = None
+        
+        # Special case: Remove head
+        if from_index == 0:
+            target_node = self.front
+            self.front = self.front.next
+            if self.front is None: self.rear = None
+        else:
+            prev = self.front
+            for _ in range(from_index - 1):
+                prev = prev.next
+            target_node = prev.next
+            prev.next = target_node.next
+            if prev.next is None: self.rear = prev
+            
+        # 2. Insert the node at to_index
+        if to_index == 0:
+            target_node.next = self.front
+            self.front = target_node
+            if self.rear is None: self.rear = target_node
+        else:
+            prev = self.front
+            for _ in range(to_index - 1):
+                prev = prev.next
+            
+            target_node.next = prev.next
+            prev.next = target_node
+            if target_node.next is None: self.rear = target_node
 
     def clear(self):
         self.front = None
         self.rear = None
+        self._size = 0
 
-    def shuffle(self):
-        if self.is_empty() or self.front.next is None:
-            return
-        
-        # extraer nodos a lista
-        songs = []
+    def get_all(self):
+        """Returns a standard list of all values (for debug/display)"""
+        items = []
         current = self.front
         while current:
-            songs.append(current.value)
+            items.append(current.value)
             current = current.next
-
-        random.shuffle(songs)
-
-        # reconstruir cola
-        self.clear()
-        for s in songs:
-            self.add(s)
-
-    def repeat(self):
-        if self.is_empty():
-            return
-        
-        current_song = self.front.value
-        self.add(current_song)
-        
-    def moveNodeKtoL(self, k, l):
-        if self.is_empty() or k == l:
-            return
-        
-        prev_k = None
-        curr_k = self.front
-        for _ in range(k):
-            if curr_k is None:
-                return
-            prev_k = curr_k
-            curr_k = curr_k.next
-        
-        if curr_k is None:
-            return
-        
-        if prev_k:
-            prev_k.next = curr_k.next
-        else:
-            self.front = curr_k.next
-        
-        if curr_k == self.rear:
-            self.rear = prev_k
-        
-        if l == 0:
-            curr_k.next = self.front
-            self.front = curr_k
-        else:
-            prev_l = None
-            curr_l = self.front
-            for _ in range(l):
-                if curr_l is None:
-                    break
-                prev_l = curr_l
-                curr_l = curr_l.next
-            
-            prev_l.next = curr_k
-            curr_k.next = curr_l
-            
-            if curr_l is None:
-                self.rear = curr_k
-                
-    def print(self):
-        current = self.front
-        values = []
-        while current:
-            values.append(str(current.value))
-            current = current.next
-        print("Queue:", " -> ".join(values))
+        return items
 
     def length(self):
-        """ Returns queue's length """
-        count = 0
-        current = self.front
-        while current:
-            count += 1
-            current = current.next
-        return count
+        return self._size
