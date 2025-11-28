@@ -181,10 +181,16 @@ class AppWindow(ctk.CTk):
     def on_previous_clicked(self):
         """Maneja el botón anterior"""
         print("Previous song clicked")
+        self.audio_backend.play_previous()
 
     def on_next_clicked(self):
         """Maneja el botón siguiente"""
         print("Next song clicked")
+        if hasattr(self, 'queue_component'):
+            next_song = self.queue_component.pop_next_song()
+            if next_song:
+                print(f"Playing next in queue: {next_song}")
+                self.on_song_selected(next_song)
 
     def on_folder_selected(self, folder_path):
         """Cuando se hace clic en una carpeta en Sources Pane"""

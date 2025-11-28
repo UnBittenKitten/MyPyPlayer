@@ -373,8 +373,8 @@ class MediaControlsPane:
     def destroy(self):
         """Limpia los timers al destruir"""
         self._stop_progress_timer()
-        if hasattr(super(), 'destroy'):
-            super().destroy()
+        # if hasattr(super(), 'destroy'):
+        #     super().destroy()
 
 def add_to(parent_frame, audio_backend, queue_component=None, on_play=None, on_pause=None, 
            on_stop=None, on_volume_change=None, on_previous=None, on_next=None):
