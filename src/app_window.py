@@ -165,6 +165,7 @@ class AppWindow(ctk.CTk):
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        self.bind_keys()
     def check_for_song_end(self):
         """Checks every second if the song has ended to play the next one."""
         if self.current_song_path and self.audio_backend.has_song_ended():
@@ -221,8 +222,6 @@ class AppWindow(ctk.CTk):
         except Exception as e:
             print(f"Error loading song: {e}")
 
-    # --- REMOVED update_now_playing_ui (It was dead code causing errors) ---
-
     def on_play_clicked(self):
         """Callback para botón Play"""
         if self.current_song_path:
@@ -275,6 +274,56 @@ class AppWindow(ctk.CTk):
 
         except Exception as e:
             print(f"Error loading layout: {e}")
+
+    def bind_keys(self):
+        """Configura los atajos de teclado"""
+        # Espacio = Play/Pause
+        self.bind('<space>', lambda e: self._trigger_play_pause())
+        
+        # Flecha derecha = Adelantar 5 segundos
+        self.bind('<Right>', lambda e: self._trigger_forward())
+        
+        # Flecha izquierda = Atrasar 5 segundos  
+        self.bind('<Left>', lambda e: self._trigger_backward())
+        
+        # Ctrl + Flecha derecha = Siguiente canción
+        self.bind('<Control-Right>', lambda e: self._trigger_next())
+        
+        # Ctrl + Flecha izquierda = Canción anterior
+        self.bind('<Control-Left>', lambda e: self._trigger_previous())
+        
+        # Prevenir que las flechas afecten el foco
+        self.bind('<KeyPress>', self._prevent_arrow_focus)
+
+    def _prevent_arrow_focus(self, event):
+        """Previene que las flechas cambien el foco entre widgets"""
+        if event.keysym in ('Left', 'Right') and not event.state & 0x4:  # 0x4 es Ctrl
+            return "break"
+
+    def _trigger_play_pause(self):
+        """Dispara el botón play/pause"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.play_pause_btn.invoke()
+
+    def _trigger_forward(self):
+        """Dispara el botón adelantar 5 segundos"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_forward()
+
+    def _trigger_backward(self):
+        """Dispara el botón atrasar 5 segundos"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_backward()
+
+    def _trigger_next(self):
+        """Dispara el botón siguiente canción"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_next()
+
+    def _trigger_previous(self):
+        """Dispara el botón canción anterior"""
+        if hasattr(self, 'media_controls'):
+            self.media_controls.on_previous()
 
     def on_close(self):
         """Saves ratios (0.0 - 1.0) to DB and closes."""
