@@ -11,7 +11,7 @@ It has a song queue feature to manage upcoming tracks.
 
 And you can play previously played songs.
 
-# How to set up environment
+## How to set up environment
 
 1. Clone the repository:
 
@@ -30,15 +30,17 @@ And you can play previously played songs.
 3. Activate the virtual environment:
 
    - On Windows:
+
      ```bash
      venv\Scripts\activate
      ```
+
    - On macOS and Linux:
+
      ```bash
      source venv/bin/activate
      ```
 
-     
      3.1 Update pip to the latest version:
 
    ```bash
@@ -46,27 +48,31 @@ And you can play previously played songs.
    ```
 
 4. Install the required packages:
+
    ```bash
     pip install -r requirements.txt
    ```
 
-# How to run the application
+## How to run the application
 
 1. Ensure your virtual environment is activated.
 2. Run the main application:
+
    ```bash
     python src/main.py
    ```
 
-# How to build the application into an executable
+## How to build the application into an executable
 
 1. Ensure your virtual environment is activated.
 2. Use PyInstaller to build the executable:
+
    ```bash
    ./release.bat
    ```
 
-# Contributors
+## Contributors
+
 - Luis Perez [UnBittenKitten](https://github.com/UnBittenKitten) - Developer, created the file explorer.
 - Roberto Carlos [ZULINOSITY](https://github.com/ZULINOSITY) - Developer, created the media controls and made the ux better.
 - Nathanael Hernandez [nathah3rnandez-dotcom](https://github.com/nathah3rnandez-dotcom) - Developer, created the song queue pane and the required logic for it.
