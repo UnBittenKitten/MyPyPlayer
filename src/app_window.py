@@ -135,7 +135,8 @@ class AppWindow(ctk.CTk):
             self.queue_component = song_queue_pane.add_to(
                 self.sec4,
                 self.data_manager,
-                self.audio_backend
+                self.audio_backend,
+                on_play_start=lambda song_path: self.on_song_selected(song_path)
             )
         except Exception as e:
             print(f"Song queue pane load error: {e}")
@@ -158,19 +159,39 @@ class AppWindow(ctk.CTk):
         except Exception as e:
             print(f"Media controls load error: {e}")
 
+        self.check_for_song_end()
+
         # --- Layout Restoration Logic ---
         self.after(200, self.load_layout)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.bind_keys()
+    def check_for_song_end(self):
+        """Checks every second if the song has ended to play the next one."""
+        if self.current_song_path and self.audio_backend.has_song_ended():
+            print("Song ended naturally. Checking queue...")
+            if hasattr(self, 'queue_component'):
+                next_song = self.queue_component.pop_next_song()
+                if next_song:
+                    print(f"Playing next in queue: {next_song}")
+                    self.on_song_selected(next_song)
+        
+        # Schedule next check in 1000ms (1 second)
+        self.after(1000, self.check_for_song_end)
 
     def on_previous_clicked(self):
         """Maneja el botón anterior"""
         print("Previous song clicked")
+        self.audio_backend.play_previous()
 
     def on_next_clicked(self):
         """Maneja el botón siguiente"""
         print("Next song clicked")
+        if hasattr(self, 'queue_component'):
+            next_song = self.queue_component.pop_next_song()
+            if next_song:
+                print(f"Playing next in queue: {next_song}")
+                self.on_song_selected(next_song)
 
     def on_folder_selected(self, folder_path):
         """Cuando se hace clic en una carpeta en Sources Pane"""
