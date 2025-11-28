@@ -1,6 +1,12 @@
 # MyPyPlayer
 
-A simple media player built with CustomTkinter and Python.
+A simple song player built with CustomTkinter and Python.
+
+It supports basic functionalities like play, pause, next, previous.
+You can add folders to explore and play songs from your local directories.
+You can create playlists to organize your music.
+It has a song queue feature to manage upcoming tracks.
+And you can play previously played songs.
 
 # How to set up environment
 
@@ -56,3 +62,9 @@ A simple media player built with CustomTkinter and Python.
    ```bash
    ./release.bat
    ```
+
+# Contributors
+- Luis Perez (UnBittenKitten) - Developer, created the file explorer.
+- Roberto Carlos (ZULINOSITY) - Developer, created the media controls and made the ux better.
+- Nathanael Hernandez (nathah3rnandez-dotcom) - Developer, created the song queue pane and the required logic for it.
+- Jonathan Javier (FudgeBit) - Developer, created the playlist pane and the sources management system.
